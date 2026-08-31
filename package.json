@@ -1,0 +1,25 @@
+{
+  "name": "tq",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pages:dev": "wrangler pages dev public",
+    "pages:deploy": "wrangler pages deploy public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/owenhsu626-cpu/TQ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/owenhsu626-cpu/TQ/issues"
+  },
+  "homepage": "https://github.com/owenhsu626-cpu/TQ#readme",
+  "devDependencies": {
+    "wrangler": "^4.127.1"
+  }
+}
