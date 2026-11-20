@@ -316,5 +316,16 @@
     else if (t.id === 'surveyStart') startSurvey(t);
   });
 
-  load().then(startPolling);
+  // 從首頁問卷入口進來（?survey=1）：問卷開放且本店未填寫時直接開始填寫
+  async function autoSurvey() {
+    if (params.get('survey') !== '1') return;
+    history.replaceState(null, '', '/me?t=' + encodeURIComponent(token));
+    if (!data) return;
+    const s = data.survey;
+    const btn = $('surveyStart');
+    if (s.state === 'open' && !s.done && !(s.lock && !s.lock.mine) && btn) return startSurvey(btn);
+    $('surveyCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  load().then(autoSurvey).then(startPolling);
 })();

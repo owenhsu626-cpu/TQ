@@ -4,6 +4,10 @@
   const $ = (id) => document.getElementById(id);
   const steps = ['stepSearch', 'stepChoose', 'stepConfirm', 'stepRules', 'stepNotFound', 'stepClosed'];
   let current = { name: '', attendee: null };
+  let surveyOpen = false; // 問卷開放期間：查詢後直接進入問卷
+  let savedName = '';
+  let savedToken = '';
+  let lastStatus = null;
 
   function show(step) {
     steps.forEach((s) => ($(s).hidden = s !== step));
@@ -13,12 +17,14 @@
     $('hero').hidden = !home;
     $('innerTop').hidden = home;
     if (!home) window.scrollTo(0, 0);
-    if (home) $('savedBox').hidden = !savedName;
+    // 問卷開放時，問卷卡片已含「我的頁面」入口，不再重複顯示已報到提示
+    $('surveyBox').hidden = !(home && surveyOpen);
+    $('savedBox').hidden = !(home && savedName && !surveyOpen);
   }
 
   function goMe(token) {
     tokenStore.set(token);
-    location.href = '/me?t=' + encodeURIComponent(token);
+    location.href = '/me?t=' + encodeURIComponent(token) + (surveyOpen ? '&survey=1' : '');
   }
 
   function busy(btn, on) {
@@ -138,37 +144,73 @@
     })
   );
 
-  // 已存的 token：提示可直接回到完成頁
-  let savedName = '';
-  const saved = tokenStore.get();
-  if (saved) {
-    api('/api/me?t=' + encodeURIComponent(saved))
-      .then((r) => {
-        savedName = r.attendee.name;
-        $('savedBox').querySelector('strong').textContent = `${r.attendee.name}（${r.attendee.store}）您已完成報到`;
-        $('savedLink').href = '/me?t=' + encodeURIComponent(saved);
-        if (!$('stepSearch').hidden) $('savedBox').hidden = false;
-      })
-      .catch((e) => {
-        if (e.status === 404) tokenStore.clear();
-      });
-  }
   $('savedClear').addEventListener('click', () => {
     tokenStore.clear();
     savedName = '';
+    savedToken = '';
     $('savedBox').hidden = true;
+    renderSurveyBox(lastStatus, null);
+    show('stepSearch');
     $('nameInput').focus();
   });
 
-  // 報到開放時間提示
-  api('/api/status')
-    .then((r) => {
-      if (r.checkin.state !== 'open') {
-        $('openInfo').textContent = (r.checkin.state === 'before' ? '報到尚未開放。' : '報到已截止。') + windowText(r.checkin);
-        $('openInfo').hidden = false;
+  function rangeText(w) {
+    const a = w.open_at ? mdhm(w.open_at) : '';
+    const b = w.close_at ? mdhm(w.close_at) : '';
+    return a && b ? `${a} – ${b}` : b ? `至 ${b}` : a ? `${a} 起` : '';
+  }
+
+  /** 首頁的問卷入口：依是否已有本機報到資料、本店是否已填寫顯示不同按鈕 */
+  function renderSurveyBox(status, me) {
+    const w = status && status.survey;
+    surveyOpen = !!w && w.state === 'open';
+    if (!surveyOpen) return;
+    const range = rangeText(w);
+    $('surveyText').textContent =
+      (range ? `填寫時間 ${range}・` : '') + '每店一份，完成即可兌換贈品';
+    $('stepSearch').querySelector('.card-title').textContent = '報到／填寫問卷';
+    const go = $('surveyGo');
+    if (me) {
+      const s = me.survey;
+      const href = '/me?t=' + encodeURIComponent(savedToken);
+      if (s.done) {
+        go.textContent = s.done.mine ? '問卷已完成，查看贈品 QR Code' : `本店已由 ${s.done.by} 完成，查看贈品`;
+        go.href = href;
+      } else {
+        go.textContent = `${me.attendee.name}，開始填寫問卷`;
+        go.href = href + '&survey=1';
       }
-    })
-    .catch(() => {});
+      go.hidden = false;
+      $('surveyHint').hidden = true;
+    } else {
+      go.hidden = true;
+      $('surveyHint').hidden = false;
+    }
+  }
+
+  // 已存的 token（已報到）與開放狀態一起載入
+  const saved = tokenStore.get();
+  const meReq = saved
+    ? api('/api/me?t=' + encodeURIComponent(saved)).catch((e) => {
+        if (e.status === 404) tokenStore.clear();
+        return null;
+      })
+    : Promise.resolve(null);
+  Promise.all([api('/api/status').catch(() => null), meReq]).then(([status, me]) => {
+    lastStatus = status;
+    if (me) {
+      savedName = me.attendee.name;
+      savedToken = saved;
+      $('savedBox').querySelector('strong').textContent = `${me.attendee.name}（${me.attendee.store}）您已完成報到`;
+      $('savedLink').href = '/me?t=' + encodeURIComponent(saved);
+    }
+    if (status && status.checkin.state !== 'open') {
+      $('openInfo').textContent = (status.checkin.state === 'before' ? '報到尚未開放。' : '報到已截止。') + windowText(status.checkin);
+      $('openInfo').hidden = false;
+    }
+    renderSurveyBox(status, me);
+    if (!$('stepSearch').hidden) show('stepSearch');
+  });
 
   show('stepSearch');
 })();

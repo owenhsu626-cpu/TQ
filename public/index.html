@@ -28,6 +28,14 @@
   </div>
 
   <main class="wrap" id="main">
+    <!-- 問卷開放期間：首頁直接顯示問卷入口 -->
+    <section class="card survey-promo" id="surveyBox" hidden>
+      <div class="promo-head"><p class="promo-tag">開放中</p><h2 class="promo-title">滿意度問卷</h2></div>
+      <p class="promo-text" id="surveyText"></p>
+      <a class="btn block" id="surveyGo" href="/me" hidden>填寫問卷</a>
+      <p class="promo-hint" id="surveyHint" hidden>↓ 請在下方輸入姓名，查詢後即可填寫</p>
+    </section>
+
     <!-- 已存 token 的提示 -->
     <div class="card soft" id="savedBox" hidden>
       <p style="margin:0 0 10px"><strong>您已完成報到</strong></p>

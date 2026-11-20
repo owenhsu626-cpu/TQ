@@ -40,7 +40,7 @@ function checkinWindow(s) {
 
 async function status(db) {
   const s = await getSettings(db);
-  return json({ ok: true, now: nowTw(), checkin: checkinWindow(s) });
+  return json({ ok: true, now: nowTw(), checkin: checkinWindow(s), survey: surveyWindow(s) });
 }
 
 /** 依 token 取得已報到的參加者（含店家），未報到視為無效 */
