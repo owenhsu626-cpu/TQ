@@ -3,7 +3,7 @@
 Cloudflare Workers + D1。一個 Worker 同時提供前端頁面（`public/`）與 `/api/*`。
 `public/` 在 `wrangler dev` / `wrangler deploy` 前會自動打包進 Worker（`scripts/build-assets.mjs` → `src/static-assets.gen.js`），不需手動建置。
 
-**測試站：** https://bridgestone-checkin-test.owenhsu626.workers.dev （後台 `/admin/`；D1 `checkin-test`，APAC）
+**測試站：** https://test-checkin.bcb.com.tw （後台 `/admin/`；D1 `checkin-test`，APAC；備用網址 https://bridgestone-checkin-test.owenhsu626.workers.dev）
 需求見 `docs/SPEC.md`，視覺見 `docs/DESIGN.md`。
 
 | 網址 | 用途 |
@@ -33,12 +33,11 @@ npx wrangler secret put ADMIN_PASSWORD --env production
 npm run db:migrate:prod
 ```
 
-取得網域後，把 `wrangler.toml` 內 `routes` 的註解取消並改成實際網域
-（`test-checkin.<網域>`、`checkin.<網域>`）。
+網域：測試站 `test-checkin.bcb.com.tw` 已綁定；正式站發佈時取消 `wrangler.toml` 中 `checkin.bcb.com.tw` 的 `routes` 註解。
 
 ## 發佈流程
 
-1. `npm run deploy:test` → 客戶在測試站確認（可用 `BASE=https://test-checkin.<網域> ADMIN_PASSWORD=... npm test` 跑測試）
+1. `npm run deploy:test` → 客戶在測試站確認（可用 `BASE=https://test-checkin.bcb.com.tw ADMIN_PASSWORD=... npm test` 跑測試）
 2. 確認後同一版 `npm run deploy:prod`（正式站資料不受影響）
 3. 活動當天不部署，除非緊急修正
 4. 資料表有變動時，新增 `migrations/000N_xxx.sql`，先 `db:migrate:test`、確認後再 `db:migrate:prod`

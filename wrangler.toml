@@ -18,8 +18,7 @@ watch_dir = "public"
 [env.test]
 name = "bridgestone-checkin-test"
 vars = { ENV_NAME = "test" }
-# 取得網域後取消註解：
-# routes = [{ pattern = "test-checkin.example.com", custom_domain = true }]
+routes = [{ pattern = "test-checkin.bcb.com.tw", custom_domain = true }]
 
 [[env.test.d1_databases]]
 binding = "DB"
@@ -31,7 +30,8 @@ migrations_dir = "migrations"
 [env.production]
 name = "bridgestone-checkin"
 vars = { ENV_NAME = "production" }
-# routes = [{ pattern = "checkin.example.com", custom_domain = true }]
+# 正式站發佈時取消註解：
+# routes = [{ pattern = "checkin.bcb.com.tw", custom_domain = true }]
 
 [[env.production.d1_databases]]
 binding = "DB"
