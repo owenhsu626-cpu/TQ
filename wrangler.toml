@@ -1,18 +1,18 @@
 # 2026 台灣普利司通經銷商年度大會 — 活動報到系統
-# 一個 Worker 同時提供前端靜態頁面（public/）與 /api/*。
+# 一個 Worker 同時提供前端靜態頁面（public/，建置時打包進 Worker）與 /api/*。
 # 兩個環境資料完全分開：test → D1 checkin-test，production → D1 checkin-prod。
 # 後台密碼用 Workers secret：npx wrangler secret put ADMIN_PASSWORD --env test|production
 
 name = "bridgestone-checkin"
 main = "src/index.js"
 compatibility_date = "2025-09-01"
+workers_dev = true      # 取得網域後可改為 false
+preview_urls = false
 
-[assets]
-directory = "public"
-binding = "ASSETS"
-run_worker_first = ["/api/*"]
-html_handling = "auto-trailing-slash"
-not_found_handling = "none"
+# 靜態檔案：dev / deploy 前自動把 public/ 打包成 src/static-assets.gen.js
+[build]
+command = "node scripts/build-assets.mjs"
+watch_dir = "public"
 
 # ---------- 測試站 ----------
 [env.test]
@@ -24,7 +24,7 @@ vars = { ENV_NAME = "test" }
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "checkin-test"
-database_id = "00000000-0000-0000-0000-000000000001" # 以 `wrangler d1 create checkin-test` 取得後替換
+database_id = "236e148d-a376-4820-bd10-bcf330475c22"
 migrations_dir = "migrations"
 
 # ---------- 正式站 ----------

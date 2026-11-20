@@ -1,6 +1,9 @@
 # 2026 台灣普利司通經銷商年度大會 — 活動報到系統
 
 Cloudflare Workers + D1。一個 Worker 同時提供前端頁面（`public/`）與 `/api/*`。
+`public/` 在 `wrangler dev` / `wrangler deploy` 前會自動打包進 Worker（`scripts/build-assets.mjs` → `src/static-assets.gen.js`），不需手動建置。
+
+**測試站：** https://bridgestone-checkin-test.owenhsu626.workers.dev （後台 `/admin/`；D1 `checkin-test`，APAC）
 需求見 `docs/SPEC.md`，視覺見 `docs/DESIGN.md`。
 
 | 網址 | 用途 |
@@ -24,13 +27,10 @@ npm test                   # 另開終端機；API 與並發測試（會清空�
 
 ```bash
 npx wrangler login
-npx wrangler d1 create checkin-test     # 把 database_id 填入 wrangler.toml [env.test]
-npx wrangler d1 create checkin-prod     # 把 database_id 填入 wrangler.toml [env.production]
-npx wrangler secret put ADMIN_PASSWORD --env test
+# 測試站 D1 已建立（checkin-test）
+npx wrangler d1 create checkin-prod --location apac   # 把 database_id 填入 wrangler.toml [env.production]
 npx wrangler secret put ADMIN_PASSWORD --env production
-npm run db:migrate:test
 npm run db:migrate:prod
-npm run db:seed:test                    # 只限測試站
 ```
 
 取得網域後，把 `wrangler.toml` 內 `routes` 的註解取消並改成實際網域

@@ -1,7 +1,8 @@
-// Worker 入口：/api/* 由程式處理，其餘交給靜態資源（public/）
+// Worker 入口：/api/* 由程式處理，其餘為靜態檔案（public/，建置時打包進 Worker）
 import { err, HttpError } from './util.js';
 import { handlePublic } from './public.js';
 import { handleAdmin } from './admin.js';
+import { serveStatic } from './static.js';
 
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
@@ -20,7 +21,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
+    if (!path.startsWith('/api/')) return serveStatic(request);
 
     try {
       if (!env.DB) throw new HttpError(500, '資料庫未設定');

@@ -2,6 +2,7 @@
   "name": "bridgestone-checkin",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "2026 台灣普利司通經銷商年度大會 — 活動報到系統（Cloudflare Workers + D1）",
   "scripts": {
     "dev": "wrangler dev --env test",
