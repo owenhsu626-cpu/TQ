@@ -1,12 +1,113 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant-TW">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TQ</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>活動報到｜2026 台灣普利司通經銷商年度大會</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="/assets/hero-mobile.jpg" media="(max-width: 767px)">
+  <link rel="preload" as="image" href="/assets/hero-wide.jpg" media="(min-width: 768px)">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/checkin.css">
 </head>
 <body>
-  <h1>TQ</h1>
-  <p>Cloudflare Pages 已就緒。</p>
+  <!-- 首頁主視覺（已含 logo 與標題，不疊文字） -->
+  <header class="hero" id="hero">
+    <picture>
+      <source media="(min-width: 768px)" srcset="/assets/hero-wide.jpg" width="2400" height="1350">
+      <img src="/assets/hero-mobile.jpg" width="1000" height="1146" alt="2026 台灣普利司通經銷商年度大會 2026 BRIDGESTONE DEALER CONVENTION">
+    </picture>
+  </header>
+
+  <!-- 內頁頁首 -->
+  <div class="topbar" id="innerTop" hidden>
+    <img class="logo" src="/assets/logo.png" width="1232" height="153" alt="BRIDGESTONE">
+  </div>
+
+  <main class="wrap" id="main">
+    <!-- 已存 token 的提示 -->
+    <div class="card soft" id="savedBox" hidden>
+      <p style="margin:0 0 10px"><strong>您已完成報到</strong></p>
+      <div class="btn-row">
+        <a class="btn" id="savedLink" href="/me">查看我的報到資訊</a>
+        <button class="btn ghost" id="savedClear" type="button">不是我</button>
+      </div>
+    </div>
+
+    <!-- 步驟 1：輸入姓名 -->
+    <section class="card" id="stepSearch">
+      <h1 class="card-title">活動報到</h1>
+      <form id="searchForm" novalidate autocomplete="off">
+        <label class="field">
+          <span>請輸入您的姓名</span>
+          <input class="input" id="nameInput" name="name" type="text" inputmode="text" enterkeyhint="search"
+                 maxlength="50" placeholder="例如：王小明" required>
+        </label>
+        <div class="alert error" id="searchErr" role="alert" hidden></div>
+        <button class="btn block" id="searchBtn" type="submit">查詢</button>
+      </form>
+      <p class="muted small center" id="openInfo" style="margin:12px 0 0" hidden></p>
+    </section>
+
+    <!-- 步驟 2：同名多筆，選擇店名 -->
+    <section class="card" id="stepChoose" hidden>
+      <h2 class="card-title">請選擇您的店名</h2>
+      <p class="muted small" style="margin-top:0">有多位「<strong id="chooseName"></strong>」，請點選您所屬的店家。</p>
+      <div id="chooseList"></div>
+      <button class="btn ghost block" type="button" data-back>重新輸入姓名</button>
+    </section>
+
+    <!-- 步驟 3：確認身分 -->
+    <section class="card" id="stepConfirm" hidden>
+      <h2 class="card-title">確認身分</h2>
+      <dl class="identity">
+        <div><dt>姓名</dt><dd id="cfName"></dd></div>
+        <div><dt>店名</dt><dd id="cfStore"></dd></div>
+      </dl>
+      <div class="btn-row">
+        <button class="btn" type="button" id="cfYes">是我，下一步</button>
+        <button class="btn ghost" type="button" data-back>不是我</button>
+      </div>
+    </section>
+
+    <!-- 步驟 4：住宿規範 -->
+    <section class="card" id="stepRules" hidden>
+      <h2 class="card-title">酒店住宿安全及注意事項</h2>
+      <div class="rules md" id="rulesText" tabindex="0"></div>
+      <label class="check" id="agreeBox">
+        <input type="checkbox" id="agree">
+        <span id="agreeText"></span>
+      </label>
+      <div class="alert error" id="checkinErr" role="alert" hidden></div>
+      <div class="stack" style="margin-top:14px">
+        <button class="btn block" type="button" id="checkinBtn" disabled>確認報到</button>
+        <button class="btn ghost block" type="button" data-back>返回</button>
+      </div>
+    </section>
+
+    <!-- 查無資料 -->
+    <section class="card center" id="stepNotFound" hidden>
+      <h2 class="card-title" style="justify-content:center">查無資料</h2>
+      <p>查無「<strong id="nfName"></strong>」的報到資料，<br>請洽報到櫃檯。</p>
+      <p class="muted small">請確認姓名是否正確（需輸入完整姓名）。</p>
+      <button class="btn block" type="button" data-back>重新輸入</button>
+    </section>
+
+    <!-- 未開放 -->
+    <section class="card center" id="stepClosed" hidden>
+      <h2 class="card-title" style="justify-content:center" id="closedTitle">報到尚未開放</h2>
+      <p id="closedText"></p>
+      <button class="btn ghost block" type="button" data-back>返回</button>
+    </section>
+
+    <p class="event-sub center">2026 Bridgestone Dealer Convention</p>
+  </main>
+  <div class="footer-strip" aria-hidden="true"></div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/checkin.js"></script>
 </body>
 </html>

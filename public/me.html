@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex">
+  <title>我的報到資訊｜2026 台灣普利司通經銷商年度大會</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/me.css">
+</head>
+<body class="inner-bg">
+  <div class="topbar">
+    <img class="logo" src="/assets/logo.png" width="1232" height="153" alt="BRIDGESTONE">
+  </div>
+
+  <main class="wrap" id="main" aria-live="polite">
+    <div class="card center" id="loading"><p class="muted">載入中…</p></div>
+
+    <div class="card center" id="invalid" hidden>
+      <h1 class="card-title" style="justify-content:center">找不到報到資料</h1>
+      <p id="invalidMsg">連結無效，請重新掃碼查詢。</p>
+      <a class="btn block" href="/">回到報到首頁</a>
+    </div>
+
+    <div id="page" hidden>
+      <!-- 報到成功 -->
+      <section class="card done-head">
+        <div class="done-badge" aria-hidden="true"></div>
+        <div>
+          <p class="done-label">報到成功</p>
+          <h1 class="done-name" id="aName"></h1>
+          <p class="muted" style="margin:2px 0 0"><span id="aStore"></span></p>
+          <p class="muted small" style="margin:2px 0 0">報到時間 <span id="aTime"></span></p>
+        </div>
+      </section>
+
+      <!-- 房號 / 桌次 -->
+      <div class="big-pair">
+        <section class="card big">
+          <p class="big-label">入住房號</p>
+          <p class="big-num" id="aRoom"></p>
+        </section>
+        <section class="card big">
+          <p class="big-label">晚宴桌次</p>
+          <p class="big-num" id="aTable"></p>
+        </section>
+      </div>
+
+      <!-- 注意事項 -->
+      <section class="card">
+        <h2 class="card-title">注意事項</h2>
+        <div class="md" id="notice"></div>
+      </section>
+
+      <!-- 餐盒兌換 -->
+      <section class="card" id="mealCard">
+        <h2 class="card-title">餐盒兌換</h2>
+        <div id="mealBody"></div>
+      </section>
+
+      <!-- 滿意度問卷 -->
+      <section class="card" id="surveyCard">
+        <h2 class="card-title">滿意度問卷</h2>
+        <div id="surveyBody"></div>
+      </section>
+
+      <!-- 贈品兌換（店家填完問卷後才出現） -->
+      <section class="card" id="giftCard" hidden>
+        <h2 class="card-title">贈品兌換</h2>
+        <div id="giftBody"></div>
+      </section>
+
+      <p class="muted small center">請將此頁加入書籤；或重新掃碼輸入姓名即可再次開啟。</p>
+    </div>
+
+    <!-- 問卷填寫 -->
+    <div id="surveyView" hidden>
+      <section class="card">
+        <h1 class="card-title">滿意度問卷</h1>
+        <p class="muted small" style="margin-top:0">每家店只需填寫一份，填寫完成即可兌換店家贈品。<span id="lockLeft"></span></p>
+        <form id="surveyForm" novalidate></form>
+      </section>
+    </div>
+
+    <p class="event-sub center">2026 Bridgestone Dealer Convention</p>
+  </main>
+  <div class="footer-strip" aria-hidden="true"></div>
+
+  <!-- 調亮顯示：白底全螢幕 QR -->
+  <div class="bright" id="bright" hidden role="dialog" aria-modal="true" aria-label="QR Code 調亮顯示">
+    <p class="bright-title" id="brightTitle"></p>
+    <div class="bright-qr" id="brightQr"></div>
+    <p class="bright-sub" id="brightSub"></p>
+    <button class="btn ghost" type="button" id="brightClose">關閉</button>
+  </div>
+
+  <!-- 人工兌換 -->
+  <div class="modal" id="manual" hidden role="dialog" aria-modal="true" aria-labelledby="manualTitle">
+    <form class="card" id="manualForm" novalidate>
+      <h2 class="card-title" id="manualTitle">人工兌換</h2>
+      <p style="margin-top:0">請將手機交給<strong>工作人員</strong>輸入 4 位數兌換碼。</p>
+      <label class="field">
+        <span id="manualWhat"></span>
+        <input class="input code-input" id="manualCode" type="password" inputmode="numeric" pattern="[0-9]*"
+               maxlength="4" autocomplete="off" placeholder="••••">
+      </label>
+      <div class="alert error" id="manualErr" role="alert" hidden></div>
+      <div class="btn-row">
+        <button class="btn" type="submit" id="manualOk">確認兌換</button>
+        <button class="btn ghost" type="button" id="manualCancel">取消</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="/vendor/qrcode.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/me.js"></script>
+</body>
+</html>

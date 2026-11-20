@@ -1,2 +1,40 @@
-name = "tq"
-pages_build_output_dir = "public"
+# 2026 台灣普利司通經銷商年度大會 — 活動報到系統
+# 一個 Worker 同時提供前端靜態頁面（public/）與 /api/*。
+# 兩個環境資料完全分開：test → D1 checkin-test，production → D1 checkin-prod。
+# 後台密碼用 Workers secret：npx wrangler secret put ADMIN_PASSWORD --env test|production
+
+name = "bridgestone-checkin"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
+
+# ---------- 測試站 ----------
+[env.test]
+name = "bridgestone-checkin-test"
+vars = { ENV_NAME = "test" }
+# 取得網域後取消註解：
+# routes = [{ pattern = "test-checkin.example.com", custom_domain = true }]
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "checkin-test"
+database_id = "00000000-0000-0000-0000-000000000001" # 以 `wrangler d1 create checkin-test` 取得後替換
+migrations_dir = "migrations"
+
+# ---------- 正式站 ----------
+[env.production]
+name = "bridgestone-checkin"
+vars = { ENV_NAME = "production" }
+# routes = [{ pattern = "checkin.example.com", custom_domain = true }]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "checkin-prod"
+database_id = "00000000-0000-0000-0000-000000000002" # 以 `wrangler d1 create checkin-prod` 取得後替換
+migrations_dir = "migrations"

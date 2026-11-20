@@ -1,0 +1,79 @@
+/* 報到完成頁 */
+.done-head { display: flex; gap: 16px; align-items: center; }
+.done-badge {
+  width: 56px; height: 56px; flex: none; border-radius: 50%;
+  background: var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 30px no-repeat;
+}
+.done-label { margin: 0; color: var(--red); font-weight: 700; letter-spacing: 0.1em; font-size: 14px; }
+.done-name { font-size: 26px; }
+
+.big-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.big-pair .card { margin: 0; text-align: center; padding: 16px 10px; position: relative; overflow: hidden; }
+.big-pair .card::after {
+  content: ''; position: absolute; right: -14px; top: 0; width: 34px; height: 100%;
+  background: var(--blue-light); clip-path: polygon(60% 0, 100% 0, 100% 100%, 0 100%);
+}
+.big-label { margin: 0; color: var(--ink-2); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; }
+.big-num {
+  margin: 2px 0 0; color: var(--red); font-weight: 700; line-height: 1.1;
+  font-size: clamp(40px, 13vw, 60px); font-variant-numeric: tabular-nums; word-break: break-all;
+  position: relative; z-index: 1;
+}
+.big-num.empty { font-size: 20px; color: var(--blue-gray); padding: 14px 0; }
+
+/* QR Code 區塊：白底大留白，至少 220px */
+.qr-box { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.qr {
+  width: min(260px, 72vw); min-width: 220px; aspect-ratio: 1;
+  background: #fff; padding: 6px; border-radius: 12px; border: 1px solid var(--blue-light);
+}
+.qr svg { width: 100%; height: 100%; display: block; }
+.qr-caption { margin: 0; font-size: 14px; color: var(--ink-2); text-align: center; }
+.qr-actions { display: flex; gap: 10px; width: 100%; }
+.qr-actions .btn { flex: 1; }
+
+.redeemed {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px; border-radius: 12px; background: var(--blue-light); text-align: center;
+}
+.redeemed .tick {
+  width: 48px; height: 48px; border-radius: 50%; background: var(--blue-gray); color: #fff;
+  display: grid; place-items: center;
+}
+.redeemed .tick svg { width: 28px; height: 28px; }
+.redeemed strong { font-size: 20px; }
+
+/* 調亮顯示 */
+.bright {
+  position: fixed; inset: 0; background: #fff; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 20px;
+}
+.bright-title { margin: 0; font-size: 20px; font-weight: 700; }
+.bright-sub { margin: 0; color: #333; }
+.bright-qr { width: min(92vw, 70vh); aspect-ratio: 1; }
+.bright-qr svg { width: 100%; height: 100%; display: block; }
+
+.code-input { text-align: center; font-size: 32px; letter-spacing: 0.5em; font-variant-numeric: tabular-nums; }
+
+/* 問卷 */
+.q { padding: 16px 0; border-top: 1px solid var(--blue-light); }
+.q:first-child { border-top: 0; padding-top: 4px; }
+.q-label { font-weight: 700; margin: 0 0 10px; }
+.q-label .req { color: var(--red); margin-left: 4px; }
+.rating { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.rating label, .opts label { cursor: pointer; }
+.rating input, .opts input { position: absolute; opacity: 0; pointer-events: none; }
+.rating span {
+  display: grid; place-items: center; height: 52px; border-radius: 12px;
+  border: 1.5px solid var(--blue-gray); font-size: 20px; font-weight: 700;
+}
+.rating input:checked + span { background: var(--red); border-color: var(--red); color: #fff; }
+.rating input:focus-visible + span, .opts input:focus-visible + span { outline: 3px solid rgba(230, 0, 19, 0.35); }
+.rating-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.opts { display: grid; gap: 8px; }
+.opts span {
+  display: flex; align-items: center; min-height: 50px; padding: 10px 14px;
+  border-radius: 12px; border: 1.5px solid var(--blue-gray);
+}
+.opts input:checked + span { border-color: var(--red); background: #fff5f5; font-weight: 700; }
+.opts input:checked + span::before { content: '●'; color: var(--red); margin-right: 8px; }

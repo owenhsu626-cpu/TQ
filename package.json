@@ -1,25 +1,28 @@
 {
-  "name": "tq",
+  "name": "bridgestone-checkin",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "2026 台灣普利司通經銷商年度大會 — 活動報到系統（Cloudflare Workers + D1）",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "pages:dev": "wrangler pages dev public",
-    "pages:deploy": "wrangler pages deploy public"
+    "dev": "wrangler dev --env test",
+    "db:migrate:local": "wrangler d1 migrations apply checkin-test --env test --local",
+    "db:seed:local": "node scripts/build-seed.mjs && wrangler d1 execute checkin-test --env test --local --file .wrangler/seed.sql",
+    "db:migrate:test": "wrangler d1 migrations apply checkin-test --env test --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply checkin-prod --env production --remote",
+    "db:seed:test": "node scripts/build-seed.mjs && wrangler d1 execute checkin-test --env test --remote --file .wrangler/seed.sql",
+    "deploy:test": "wrangler deploy --env test",
+    "deploy:prod": "wrangler deploy --env production",
+    "vendor": "cp node_modules/qrcode-generator/dist/qrcode.js public/vendor/qrcode.js && cp node_modules/html5-qrcode/html5-qrcode.min.js public/vendor/html5-qrcode.min.js",
+    "test": "node --test --test-concurrency=1 test/api.test.mjs"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/owenhsu626-cpu/TQ.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/owenhsu626-cpu/TQ/issues"
-  },
-  "homepage": "https://github.com/owenhsu626-cpu/TQ#readme",
+  "license": "UNLICENSED",
   "devDependencies": {
+    "html5-qrcode": "^2.3.8",
+    "qrcode-generator": "^2.0.4",
     "wrangler": "^4.127.1"
   }
 }

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>報到後台｜2026 台灣普利司通經銷商年度大會</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <!-- 登入 -->
+  <div class="login" id="login" hidden>
+    <form class="card login-card" id="loginForm" novalidate>
+      <img class="logo" src="/assets/logo.png" width="1232" height="153" alt="BRIDGESTONE">
+      <h1>報到系統後台</h1>
+      <p class="event-sub" style="margin:0 0 18px">2026 Bridgestone Dealer Convention</p>
+      <label class="field">
+        <span>後台密碼</span>
+        <input class="input" id="pw" type="password" autocomplete="current-password" required>
+      </label>
+      <div class="alert error" id="loginErr" role="alert" hidden></div>
+      <button class="btn block" type="submit" id="loginBtn">登入</button>
+    </form>
+  </div>
+
+  <!-- 後台 -->
+  <div id="app" hidden>
+    <header class="a-head">
+      <div class="a-head-row">
+        <img class="logo" src="/assets/logo.png" width="1232" height="153" alt="BRIDGESTONE">
+        <span class="env" id="envBadge"></span>
+        <span class="sync" id="sync" title="每 5 秒自動更新"></span>
+        <button class="btn ghost small" type="button" id="logout">登出</button>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="後台功能">
+        <button role="tab" data-tab="overview" aria-selected="true">總覽</button>
+        <button role="tab" data-tab="people">名單／代報到</button>
+        <button role="tab" data-tab="scan">掃碼核銷</button>
+        <button role="tab" data-tab="stores">問卷／贈品</button>
+        <button role="tab" data-tab="data">匯入匯出</button>
+        <button role="tab" data-tab="settings">設定</button>
+      </nav>
+    </header>
+
+    <main class="a-main">
+      <!-- 總覽 -->
+      <section class="tab" id="tab-overview">
+        <div class="stats" id="stats"></div>
+        <div class="card">
+          <h2 class="card-title">最近報到</h2>
+          <div id="recent"></div>
+        </div>
+      </section>
+
+      <!-- 名單 -->
+      <section class="tab" id="tab-people" hidden>
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="篩選狀態">
+            <button type="button" data-filter="absent" class="on">未到 <b id="cAbsent"></b></button>
+            <button type="button" data-filter="present">已報到 <b id="cPresent"></b></button>
+            <button type="button" data-filter="all">全部 <b id="cAll"></b></button>
+          </div>
+          <input class="input" id="q" type="search" placeholder="搜尋姓名、店名、房號" aria-label="搜尋">
+          <select class="input" id="fStore" aria-label="依店名篩選"><option value="">全部店家</option></select>
+          <select class="input" id="fTable" aria-label="依桌次篩選"><option value="">全部桌次</option></select>
+        </div>
+        <div id="peopleList"></div>
+      </section>
+
+      <!-- 掃碼 -->
+      <section class="tab" id="tab-scan" hidden>
+        <div class="scan-grid">
+          <div class="card">
+            <h2 class="card-title">掃描餐盒／贈品 QR Code</h2>
+            <div id="reader" class="reader"></div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn" type="button" id="camStart">開啟相機</button>
+              <button class="btn ghost" type="button" id="camStop" hidden>關閉相機</button>
+            </div>
+            <p class="muted small">系統會自動判斷是餐盒或贈品。掃不到時，請改用「名單」或「問卷／贈品」頁直接按兌換。</p>
+          </div>
+          <div>
+            <div class="scan-result idle" id="scanResult" aria-live="assertive">
+              <p class="sr-title">等待掃描</p>
+            </div>
+            <div class="card">
+              <h2 class="card-title">本機掃描紀錄</h2>
+              <ol class="scan-log" id="scanLog"></ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 店家 -->
+      <section class="tab" id="tab-stores" hidden>
+        <div class="toolbar">
+          <input class="input" id="qStore" type="search" placeholder="搜尋店名" aria-label="搜尋店名">
+        </div>
+        <div id="storeList"></div>
+      </section>
+
+      <!-- 匯入匯出 -->
+      <section class="tab" id="tab-data" hidden>
+        <div class="card">
+          <h2 class="card-title">匯入名單 CSV</h2>
+          <p class="muted small" style="margin-top:0">格式：<code>姓名,店名,房號,桌次,備註</code>（第一列可為表頭，備註選填）。支援 UTF-8 與 Excel 預設的 Big5 編碼。</p>
+          <input class="input" type="file" id="csvFile" accept=".csv,text/csv">
+          <fieldset class="radios">
+            <legend class="sr-only">匯入方式</legend>
+            <label><input type="radio" name="mode" value="merge" checked> 新增／更新（同店同名更新房號、桌次、備註，保留報到紀錄）</label>
+            <label><input type="radio" name="mode" value="replace"> 清空後匯入（刪除所有名單、報到、問卷、兌換紀錄）</label>
+          </fieldset>
+          <div class="alert" id="importInfo" hidden></div>
+          <div class="btn-row">
+            <button class="btn" type="button" id="importBtn" disabled>匯入</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">匯出紀錄</h2>
+          <div class="btn-row">
+            <a class="btn ghost" href="/api/admin/export?type=attendees" download>報到／餐盒紀錄</a>
+            <a class="btn ghost" href="/api/admin/export?type=surveys" download>問卷答案</a>
+            <a class="btn ghost" href="/api/admin/export?type=stores" download>店家贈品紀錄</a>
+          </div>
+        </div>
+        <div class="card" id="resetCard" hidden>
+          <h2 class="card-title">清空測試紀錄（僅測試站）</h2>
+          <p class="muted small" style="margin-top:0">保留名單，清除所有報到、問卷、餐盒與贈品兌換紀錄。</p>
+          <button class="btn ghost" type="button" id="resetBtn">清空測試紀錄</button>
+        </div>
+      </section>
+
+      <!-- 設定 -->
+      <section class="tab" id="tab-settings" hidden>
+        <form id="settingsForm" novalidate>
+          <div class="card">
+            <h2 class="card-title">開放時間（台灣時間）</h2>
+            <div class="grid2">
+              <label class="field"><span>報到開始</span><input class="input" type="datetime-local" name="checkin_open_at"></label>
+              <label class="field"><span>報到結束</span><input class="input" type="datetime-local" name="checkin_close_at"></label>
+              <label class="field"><span>問卷開始</span><input class="input" type="datetime-local" name="survey_open_at"></label>
+              <label class="field"><span>問卷結束</span><input class="input" type="datetime-local" name="survey_close_at"></label>
+            </div>
+            <p class="muted small" style="margin:0">留空 = 不限制（報到預設為立即開放）。</p>
+          </div>
+          <div class="card">
+            <h2 class="card-title">兌換</h2>
+            <div class="grid2">
+              <label class="field"><span>贈品總數量</span><input class="input" type="number" min="0" step="1" name="gift_stock"></label>
+              <label class="field"><span>人工兌換碼（4 位數）</span><input class="input" type="text" inputmode="numeric" maxlength="4" name="manual_code" autocomplete="off"></label>
+            </div>
+            <p class="muted small" style="margin:0" id="codeWarn"></p>
+          </div>
+          <div class="card">
+            <h2 class="card-title">文字內容</h2>
+            <label class="field"><span>注意事項（完成頁，所有人相同）</span><textarea class="input" name="notice_text" rows="4"></textarea></label>
+            <label class="field"><span>酒店住宿安全及注意事項</span><textarea class="input" name="hotel_rules" rows="10"></textarea></label>
+            <label class="field"><span>住宿規範同意文字（勾選框）</span><textarea class="input" name="hotel_rules_agree" rows="3"></textarea></label>
+            <p class="muted small" style="margin:0">格式：空一行分段；行首「- 」為條列；<code>**文字**</code> 為粗體。</p>
+          </div>
+          <div class="card">
+            <h2 class="card-title">滿意度問卷題目</h2>
+            <p class="muted small" style="margin-top:0">已有店家填寫後修改題目，舊答案仍會保留並可匯出。</p>
+            <div id="qEditor"></div>
+            <button class="btn ghost" type="button" id="qAdd">＋ 新增題目</button>
+          </div>
+          <div class="save-bar">
+            <div class="alert error" id="settingsErr" role="alert" hidden></div>
+            <button class="btn" type="submit" id="saveBtn">儲存設定</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
