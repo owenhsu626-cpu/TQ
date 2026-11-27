@@ -1,0 +1,14 @@
+/* Buffet 統一入口 */
+.buffet-head { text-align: center; margin: 4px 0 16px; }
+.buffet-head h1 { font-size: 28px; }
+.promo-tag {
+  display: inline-block; margin: 0 0 6px; padding: 2px 12px; border-radius: 99px;
+  background: var(--red); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.15em;
+}
+.who { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; }
+.who-name { margin: 0; font-size: 22px; font-weight: 700; }
+.who .btn { flex: none; }
+.redeemed.big-done { padding: 28px 18px; }
+.redeemed.big-done strong { font-size: 24px; }
+.redeemed.big-done .tick { width: 64px; height: 64px; }
+.redeemed.big-done .tick svg { width: 36px; height: 36px; }

@@ -23,9 +23,9 @@ for (const s of [...new Set(rows.map((r) => r.store))]) {
 }
 for (const r of rows) {
   lines.push(
-    `INSERT INTO attendees (name, store_id, room, table_no, note, token) VALUES (${q(r.name)}, (SELECT id FROM stores WHERE name = ${q(
+    `INSERT INTO attendees (name, store_id, room, table_no, transport, buffet_eligible, note, token) VALUES (${q(r.name)}, (SELECT id FROM stores WHERE name = ${q(
       r.store
-    )}), ${q(r.room)}, ${q(r.table_no)}, ${q(r.note)}, ${q(tok())});`
+    )}), ${q(r.room)}, ${q(r.table_no)}, ${q(r.transport)}, ${r.buffet}, ${q(r.note)}, ${q(tok())});`
   );
 }
 mkdirSync(join(root, '.wrangler'), { recursive: true });

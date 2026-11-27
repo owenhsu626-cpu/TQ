@@ -6,8 +6,9 @@
 
 一個手機優先（RWD）的活動報到網站，加一個工作人員後台：
 
-- 參加者：掃 QR Code → 輸入姓名 → （同名時選店名）→ 確認身分 → 勾選住宿規範 → 報到完成頁（房號、桌次、注意事項、餐盒 QR、問卷、贈品 QR）
-- 工作人員後台：報到人數、未到名單、代報到、掃碼或人工核銷餐盒與贈品、問卷與兌換統計、CSV 匯入匯出、各項設定
+- 參加者：掃 QR Code → 輸入姓名 → （同名時選店名）→ 確認身分 → 勾選住宿規範 → 報到完成頁（房號、桌次、交通方式、注意事項、Buffet 兌換券 QR、問卷、贈品 QR）
+- Buffet 統一入口 `/buffet`：現場張貼同一個 QR Code，同手機直接帶出身分、換手機輸入姓名（同名選店），依資料顯示兌換券／已兌換時間／請先報到／您沒有 Buffet 兌換券
+- 工作人員後台：報到人數、未到名單、代報到、掃碼或人工核銷 Buffet 與贈品、問卷與兌換統計、CSV 匯入匯出、Buffet 入口 QR Code／海報下載、各項設定
 
 ## 技術架構（已定案）
 
@@ -34,7 +35,7 @@
 - **唯一性由 D1 保證，不靠前端判斷**：
   - 每家店只能有一份問卷 → `surveys.store_id` UNIQUE
   - 每家店只能兌換一次贈品 → `stores.gift_redeemed_at` 用條件式 UPDATE（`WHERE gift_redeemed_at IS NULL`）
-  - 每人只能領一份餐盒，且必須已報到 → 條件式 UPDATE（`WHERE checked_in_at IS NOT NULL AND meal_redeemed_at IS NULL`）
+  - 每人只能兌換一份 Buffet，須有 Buffet 資格且已報到 → 條件式 UPDATE（`WHERE buffet_eligible = 1 AND checked_in_at IS NOT NULL AND meal_redeemed_at IS NULL`；`meal_*` 欄位沿用為 Buffet）
   - 贈品限量：扣庫存與標記兌換在同一個 batch / transaction，庫存 <= 0 時拒絕
 - **同店問卷填寫鎖定（必要）**：進入問卷時取得店家鎖（10 分鐘，存在 D1），其他同店的人看到「同店 OOO 正在填寫」；送出時再以 UNIQUE 限制兜底，後送者看到「本店已由 OOO 於 HH:MM 填寫完成」
 - **時間一律以伺服器時間（Asia/Taipei）判斷**：報到開放時間、問卷開放時間（預設 12/6 21:00 – 12/7 08:30）
@@ -42,7 +43,7 @@
 - 已報到的人再查詢 → 直接回到報到完成頁，不重複報到
 - 住宿規範未勾選前「確認報到」按鈕必須 disabled；伺服器端也要驗證有勾選
 - 參加者身分憑證：報到成功後發給該參加者一個隨機 token（存在 localStorage + URL），用來重新打開完成頁；QR Code 內容是不可猜的 token，不能是流水號
-- 人工兌換按鈕：參加者畫面按「人工兌換」後，需要工作人員輸入 4 位數兌換碼確認（兌換碼在後台設定）
+- 人工兌換按鈕（Buffet 與贈品相同）：參加者畫面按「人工兌換」後跳出「是否確認兌換？請由工作人員操作」，工作人員按「確認兌換」才算兌換，不需兌換碼（2026-11-27 客戶變更）
 - 後台需登入密碼，test 與 production 各自獨立（用 Workers secret）
 
 ## RWD
@@ -59,5 +60,5 @@
 
 - 滿意度問卷題目：先放 3 題示範題（後台可編輯題目）
 - 「簡單注意事項」文字：先放示範文字（後台可編輯，所有人相同）
-- 正式名單：先用 `data/sample-attendees.csv`，之後由主辦方匯入 CSV
+- 正式名單：先用 `data/sample-attendees.csv`，之後由主辦方匯入 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註`；Buffet資格「有／無」，空白視為「有」）
 - HONOR Sans TC 是否有網頁授權未確認 → 先用 Noto Sans TC

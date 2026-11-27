@@ -44,20 +44,36 @@ const HEADER_MAP = {
   桌次: 'table_no',
   table: 'table_no',
   table_no: 'table_no',
+  交通方式: 'transport',
+  交通: 'transport',
+  transport: 'transport',
+  buffet資格: 'buffet',
+  buffet: 'buffet',
   備註: 'note',
   note: 'note',
 };
 
+const YES = new Set(['', '有', '是', 'y', 'yes', 'v', '1', 'true', '○', 'o']);
+const NO = new Set(['無', '没有', '沒有', '否', 'n', 'no', 'x', '0', 'false', '×']);
+
+/** Buffet資格：有 / 無；空白視為「有」。無法辨識回傳 null */
+export function parseBuffet(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (YES.has(s)) return 1;
+  if (NO.has(s)) return 0;
+  return null;
+}
+
 /**
- * 解析名單 CSV：姓名,店名,房號,桌次,備註
- * 有表頭時依表頭欄名對應，否則依欄位順序。
- * 回傳 { rows: [{name, store, room, table_no, note}], errors: [string] }
+ * 解析名單 CSV：姓名,店名,房號,桌次,交通方式,Buffet資格,備註
+ * 有表頭時依表頭欄名對應，否則依欄位順序。Buffet資格空白視為「有」。
+ * 回傳 { rows: [{name, store, room, table_no, transport, buffet, note}], errors: [string] }
  */
 export function parseAttendeeCsv(text) {
   const raw = parseCsv(text);
   const errors = [];
   if (!raw.length) return { rows: [], errors: ['檔案沒有資料'] };
-  let cols = ['name', 'store', 'room', 'table_no', 'note'];
+  let cols = ['name', 'store', 'room', 'table_no', 'transport', 'buffet', 'note'];
   let start = 0;
   const head = raw[0].map((c) => c.trim().toLowerCase());
   if (head.some((h) => HEADER_MAP[h] === 'name')) {
@@ -82,12 +98,19 @@ export function parseAttendeeCsv(text) {
       errors.push(`第 ${line} 行：${r.name}（${r.store}）重複`);
       continue;
     }
+    const buffet = parseBuffet(r.buffet);
+    if (buffet === null) {
+      errors.push(`第 ${line} 行：Buffet資格需填「有」或「無」（目前為「${r.buffet}」）`);
+      continue;
+    }
     seen.add(key);
     rows.push({
       name: r.name,
       store: r.store,
       room: r.room || '',
       table_no: r.table_no || '',
+      transport: r.transport || '',
+      buffet,
       note: r.note || '',
     });
   }

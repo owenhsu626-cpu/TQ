@@ -1,9 +1,10 @@
-// 餐盒與贈品兌換：一律用條件式 UPDATE 保證只成功一次，失敗再查原因。
+// Buffet 兌換券與贈品兌換：一律用條件式 UPDATE 保證只成功一次，失敗再查原因。
 import { nowTw } from './util.js';
 
 /**
- * 餐盒兌換。where 為 { token } 或 { id }。
- * 回傳 { status: 'redeemed'|'already'|'not_checked_in'|'not_found', name, store, at }
+ * Buffet 兌換券兌換（沿用 meal_* 欄位）。where 為 { token } 或 { id }。
+ * 條件：有 Buffet 資格、已報到、尚未兌換。
+ * 回傳 { status: 'redeemed'|'already'|'not_checked_in'|'not_eligible'|'not_found', name, store, at }
  */
 export async function redeemMeal(db, where, by) {
   const now = nowTw();
@@ -11,20 +12,21 @@ export async function redeemMeal(db, where, by) {
   const res = await db
     .prepare(
       `UPDATE attendees SET meal_redeemed_at = ?1, meal_redeemed_by = ?2
-       WHERE ${col} = ?3 AND checked_in_at IS NOT NULL AND meal_redeemed_at IS NULL`
+       WHERE ${col} = ?3 AND buffet_eligible = 1 AND checked_in_at IS NOT NULL AND meal_redeemed_at IS NULL`
     )
     .bind(now, by, val)
     .run();
   const row = await db
     .prepare(
-      `SELECT a.id, a.name, s.name AS store, a.room, a.table_no, a.checked_in_at, a.meal_redeemed_at
+      `SELECT a.id, a.name, s.name AS store, a.room, a.table_no, a.checked_in_at, a.meal_redeemed_at, a.buffet_eligible, a.transport
        FROM attendees a JOIN stores s ON s.id = a.store_id WHERE a.${col} = ?1`
     )
     .bind(val)
     .first();
   if (!row) return { status: 'not_found' };
-  const info = { id: row.id, name: row.name, store: row.store, room: row.room, table_no: row.table_no };
+  const info = { id: row.id, name: row.name, store: row.store, room: row.room, table_no: row.table_no, transport: row.transport };
   if (res.meta.changes > 0) return { status: 'redeemed', at: now, ...info };
+  if (!row.buffet_eligible) return { status: 'not_eligible', ...info };
   if (!row.checked_in_at) return { status: 'not_checked_in', ...info };
   return { status: 'already', at: row.meal_redeemed_at, ...info };
 }

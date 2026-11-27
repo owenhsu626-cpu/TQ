@@ -64,9 +64,10 @@
             <button type="button" data-filter="present">已報到 <b id="cPresent"></b></button>
             <button type="button" data-filter="all">全部 <b id="cAll"></b></button>
           </div>
-          <input class="input" id="q" type="search" placeholder="搜尋姓名、店名、房號" aria-label="搜尋">
+          <input class="input" id="q" type="search" placeholder="搜尋姓名、店名、房號、車號" aria-label="搜尋">
           <select class="input" id="fStore" aria-label="依店名篩選"><option value="">全部店家</option></select>
           <select class="input" id="fTable" aria-label="依桌次篩選"><option value="">全部桌次</option></select>
+          <select class="input" id="fTransport" aria-label="依交通方式篩選"><option value="">全部交通方式</option></select>
         </div>
         <div id="peopleList"></div>
       </section>
@@ -75,13 +76,13 @@
       <section class="tab" id="tab-scan" hidden>
         <div class="scan-grid">
           <div class="card">
-            <h2 class="card-title">掃描餐盒／贈品 QR Code</h2>
+            <h2 class="card-title">掃描 Buffet／贈品 QR Code</h2>
             <div id="reader" class="reader"></div>
             <div class="btn-row" style="margin-top:12px">
               <button class="btn" type="button" id="camStart">開啟相機</button>
               <button class="btn ghost" type="button" id="camStop" hidden>關閉相機</button>
             </div>
-            <p class="muted small">系統會自動判斷是餐盒或贈品。掃不到時，請改用「名單」或「問卷／贈品」頁直接按兌換。</p>
+            <p class="muted small">系統會自動判斷是 Buffet 兌換券或贈品。掃不到時，請改用「名單」或「問卷／贈品」頁直接按兌換。</p>
           </div>
           <div>
             <div class="scan-result idle" id="scanResult" aria-live="assertive">
@@ -107,11 +108,11 @@
       <section class="tab" id="tab-data" hidden>
         <div class="card">
           <h2 class="card-title">匯入名單 CSV</h2>
-          <p class="muted small" style="margin-top:0">格式：<code>姓名,店名,房號,桌次,備註</code>（第一列可為表頭，備註選填）。支援 UTF-8 與 Excel 預設的 Big5 編碼。</p>
+          <p class="muted small" style="margin-top:0">格式：<code>姓名,店名,房號,桌次,交通方式,Buffet資格,備註</code>（第一列為表頭）。交通方式例如「1 號車」「自行開車前往」；Buffet資格填「有」或「無」，空白視為「有」；備註選填。支援 UTF-8 與 Excel 預設的 Big5 編碼。</p>
           <input class="input" type="file" id="csvFile" accept=".csv,text/csv">
           <fieldset class="radios">
             <legend class="sr-only">匯入方式</legend>
-            <label><input type="radio" name="mode" value="merge" checked> 新增／更新（同店同名更新房號、桌次、備註，保留報到紀錄）</label>
+            <label><input type="radio" name="mode" value="merge" checked> 新增／更新（同店同名更新房號、桌次、交通方式、Buffet資格、備註，保留報到紀錄）</label>
             <label><input type="radio" name="mode" value="replace"> 清空後匯入（刪除所有名單、報到、問卷、兌換紀錄）</label>
           </fieldset>
           <div class="alert" id="importInfo" hidden></div>
@@ -122,14 +123,28 @@
         <div class="card">
           <h2 class="card-title">匯出紀錄</h2>
           <div class="btn-row">
-            <a class="btn ghost" href="/api/admin/export?type=attendees" download>報到／餐盒紀錄</a>
+            <a class="btn ghost" href="/api/admin/export?type=attendees" download>報到／Buffet 紀錄</a>
             <a class="btn ghost" href="/api/admin/export?type=surveys" download>問卷答案</a>
             <a class="btn ghost" href="/api/admin/export?type=stores" download>店家贈品紀錄</a>
           </div>
         </div>
+        <div class="card">
+          <h2 class="card-title">Buffet 統一入口 QR Code</h2>
+          <p class="muted small" style="margin-top:0">印出後張貼在 Buffet 現場，大家掃同一個 QR Code 就能叫出自己的兌換券。此 QR Code 指向目前這個站台，正式站請在正式站後台下載。</p>
+          <div class="bq">
+            <div class="bq-qr" id="bqPreview"></div>
+            <div>
+              <p style="margin:0 0 12px"><a id="bqUrl" target="_blank" rel="noopener"></a></p>
+              <div class="btn-row">
+                <button class="btn" type="button" id="bqPoster">下載 A4 海報（PNG）</button>
+                <button class="btn ghost" type="button" id="bqPng">只下載 QR Code（PNG）</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card" id="resetCard" hidden>
           <h2 class="card-title">清空測試紀錄（僅測試站）</h2>
-          <p class="muted small" style="margin-top:0">保留名單，清除所有報到、問卷、餐盒與贈品兌換紀錄。</p>
+          <p class="muted small" style="margin-top:0">保留名單，清除所有報到、問卷、Buffet 與贈品兌換紀錄。</p>
           <button class="btn ghost" type="button" id="resetBtn">清空測試紀錄</button>
         </div>
       </section>
@@ -151,9 +166,8 @@
             <h2 class="card-title">兌換</h2>
             <div class="grid2">
               <label class="field"><span>贈品總數量</span><input class="input" type="number" min="0" step="1" name="gift_stock"></label>
-              <label class="field"><span>人工兌換碼（4 位數）</span><input class="input" type="text" inputmode="numeric" maxlength="4" name="manual_code" autocomplete="off"></label>
             </div>
-            <p class="muted small" style="margin:0" id="codeWarn"></p>
+            <p class="muted small" style="margin:0">人工兌換：參加者畫面按「人工兌換」後，由工作人員按「確認兌換」即完成，不需兌換碼。</p>
           </div>
           <div class="card">
             <h2 class="card-title">文字內容</h2>
@@ -177,6 +191,7 @@
     </main>
   </div>
 
+  <script src="/vendor/qrcode.js"></script>
   <script src="/js/common.js"></script>
   <script src="/js/admin.js"></script>
 </body>

@@ -82,12 +82,12 @@ test('報到時間外不能報到', async () => {
   await admin('settings', { settings: { checkin_open_at: '' } }, 'PUT');
 });
 
-test('餐盒：未報到不能領；10 次並發掃碼只成功 1 次', async () => {
+test('Buffet：未報到不能兌換；10 次並發掃碼只成功 1 次', async () => {
   const d = await admin('dashboard');
-  const p = d.attendees.find((a) => a.name === '郭雅婷');
+  const p = d.attendees.find((a) => a.name === '謝怡君');
   const no = await admin('redeem', { kind: 'meal', id: p.id });
   assert.equal(no.status, 'not_checked_in');
-  const t = await checkinByName('郭雅婷');
+  const t = await checkinByName('謝怡君');
   const rs = await Promise.all(Array.from({ length: 10 }, () => admin('scan', { code: 'M:' + t })));
   assert.equal(rs.filter((r) => r.status === 'redeemed').length, 1);
   assert.equal(rs.filter((r) => r.status === 'already').length, 9);
@@ -151,14 +151,32 @@ test('贈品：未填問卷不能領；限量 1 份時兩店並發只成功 1 �
   await admin('settings', { settings: { gift_stock: '50' } }, 'PUT');
 });
 
-test('人工兌換碼：錯誤 5 次鎖定', async () => {
+test('人工兌換：需工作人員確認（confirm），不需兌換碼', async () => {
   const t = await checkinByName('楊郁婷');
-  for (let i = 0; i < 5; i++) {
-    const r = await call('/api/redeem/manual', { t, kind: 'meal', code: '9999' });
-    assert.equal(r.status, 403);
-  }
-  const r = await call('/api/redeem/manual', { t, kind: 'meal', code: original.manual_code });
-  assert.equal(r.status, 429);
+  const no = await call('/api/redeem/manual', { t, kind: 'meal' });
+  assert.equal(no.status, 400);
+  const ok = await call('/api/redeem/manual', { t, kind: 'meal', confirm: true });
+  assert.equal(ok.status, 'redeemed');
+  const again = await call('/api/redeem/manual', { t, kind: 'meal', confirm: true });
+  assert.equal(again.status, 'already');
+});
+
+test('Buffet 資格：無資格者看不到兌換券、掃碼與人工兌換都被拒', async () => {
+  const d = await admin('dashboard');
+  const p = d.attendees.find((a) => !a.buffet_eligible);
+  assert.ok(p, '範例名單需有 Buffet資格=無 的人');
+  const t = await checkinByName(p.name, p.store);
+  const me = await call('/api/me?t=' + encodeURIComponent(t));
+  assert.equal(me.buffet.eligible, false);
+  assert.equal(me.buffet.code, undefined);
+  assert.equal((await call('/api/redeem/manual', { t, kind: 'meal', confirm: true })).status, 'not_eligible');
+  assert.equal((await admin('scan', { code: 'M:' + t })).status, 'not_eligible');
+  assert.equal((await admin('redeem', { kind: 'meal', id: p.id })).status, 'not_eligible');
+  const yes = d.attendees.find((a) => a.buffet_eligible && a.transport);
+  const t2 = await checkinByName(yes.name, yes.store);
+  const me2 = await call('/api/me?t=' + encodeURIComponent(t2));
+  assert.equal(me2.buffet.eligible, true);
+  assert.equal(me2.attendee.transport, yes.transport);
 });
 
 test('無效 QR、無效 token、未登入', async () => {
@@ -171,9 +189,17 @@ test('無效 QR、無效 token、未登入', async () => {
   cookie = saved;
 });
 
-test('CSV 匯入檢查', async () => {
+test('CSV 匯入檢查（交通方式、Buffet資格）', async () => {
   const bad = await admin('import', { csv: '姓名,店名\n王一,\n', dryRun: true });
   assert.equal(bad.status, 400);
-  const ok = await admin('import', { csv: '﻿姓名,店名,房號,桌次,備註\n王一,"新店, 測試",101,9,\n', dryRun: true });
-  assert.equal(ok.count, 1);
+  const badBuffet = await admin('import', { csv: '姓名,店名,房號,桌次,交通方式,Buffet資格,備註\n王一,新店,101,9,1 號車,也許,\n', dryRun: true });
+  assert.equal(badBuffet.status, 400);
+  assert.match(badBuffet.errors[0], /Buffet資格/);
+  const ok = await admin('import', {
+    csv: '\uFEFF姓名,店名,房號,桌次,交通方式,Buffet資格,備註\n王一,"新店, 測試",101,9,1 號車,有,\n王二,新店,102,9,自行開車前往,,\n王三,新店,103,9,2 號車,無,素食\n',
+    dryRun: true,
+  });
+  assert.equal(ok.count, 3);
+  const noHeader = await admin('import', { csv: '王四,新店,104,9,3 號車,無,\n', dryRun: true });
+  assert.equal(noHeader.count, 1);
 });

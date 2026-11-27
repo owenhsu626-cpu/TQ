@@ -94,7 +94,7 @@ async function dashboard(db, env) {
   const [att, stores, gift] = await Promise.all([
     db
       .prepare(
-        `SELECT a.id, a.name, a.store_id, s.name AS store, a.room, a.table_no, a.note,
+        `SELECT a.id, a.name, a.store_id, s.name AS store, a.room, a.table_no, a.transport, a.buffet_eligible, a.note,
                 a.checked_in_at, a.checkin_method, a.meal_redeemed_at, a.meal_redeemed_by
          FROM attendees a JOIN stores s ON s.id = a.store_id ORDER BY s.name, a.name`
       )
@@ -129,6 +129,8 @@ async function dashboard(db, env) {
       attendees: a.length,
       checked_in: a.filter((x) => x.checked_in_at).length,
       meal: a.filter((x) => x.meal_redeemed_at).length,
+      buffet_eligible: a.filter((x) => x.buffet_eligible).length,
+      buffet_ready: a.filter((x) => x.buffet_eligible && x.checked_in_at).length,
       stores: st.length,
       surveys: st.filter((s) => s.survey_at).length,
       gift_stock: gift.stock,
@@ -163,7 +165,7 @@ async function undo(db, body) {
   if (body.kind === 'checkin') {
     const a = await db.prepare('SELECT meal_redeemed_at FROM attendees WHERE id = ?1').bind(id).first();
     if (!a) throw new HttpError(404, '查無此人');
-    if (a.meal_redeemed_at) throw new HttpError(409, '此人已領餐盒，請先取消餐盒兌換');
+    if (a.meal_redeemed_at) throw new HttpError(409, '此人已兌換 Buffet，請先取消 Buffet 兌換');
     await db
       .prepare('UPDATE attendees SET checked_in_at = NULL, checkin_method = NULL, rules_agreed_at = NULL WHERE id = ?1')
       .bind(id)
@@ -254,9 +256,6 @@ async function saveSettings(db, body) {
     } else if (k === 'gift_stock') {
       if (!/^\d{1,5}$/.test(v.trim())) throw new HttpError(400, '贈品數量需為整數');
       v = String(Number(v));
-    } else if (k === 'manual_code') {
-      if (!/^\d{4}$/.test(v.trim())) throw new HttpError(400, '人工兌換碼需為 4 位數字');
-      v = v.trim();
     } else if (k === 'survey_questions') {
       v = validateQuestions(v);
     }
@@ -308,11 +307,12 @@ async function importCsv(db, env, body) {
     stmts.push(
       db
         .prepare(
-          `INSERT INTO attendees (name, store_id, room, table_no, note, token)
-           VALUES (?1, (SELECT id FROM stores WHERE name = ?2), ?3, ?4, ?5, ?6)
-           ON CONFLICT(name, store_id) DO UPDATE SET room = excluded.room, table_no = excluded.table_no, note = excluded.note`
+          `INSERT INTO attendees (name, store_id, room, table_no, transport, buffet_eligible, note, token)
+           VALUES (?1, (SELECT id FROM stores WHERE name = ?2), ?3, ?4, ?5, ?6, ?7, ?8)
+           ON CONFLICT(name, store_id) DO UPDATE SET room = excluded.room, table_no = excluded.table_no,
+             transport = excluded.transport, buffet_eligible = excluded.buffet_eligible, note = excluded.note`
         )
-        .bind(normName(r.name), r.store, r.room, r.table_no, r.note, randomToken())
+        .bind(normName(r.name), r.store, r.room, r.table_no, r.transport, r.buffet, r.note, randomToken())
     );
   }
   for (let i = 0; i < stmts.length; i += 100) await db.batch(stmts.slice(i, i + 100));
@@ -320,7 +320,7 @@ async function importCsv(db, env, body) {
   return json({ ok: true, mode, imported: rows.length, stores: storeNames.length, total: total.n });
 }
 
-const METHOD = { self: '自助', staff: '櫃檯', scan: '掃碼', manual: '人工兌換碼' };
+const METHOD = { self: '自助', staff: '櫃檯', scan: '掃碼', manual: '人工兌換' };
 
 async function exportCsv(db, type) {
   let name;
@@ -334,12 +334,14 @@ async function exportCsv(db, type) {
       .all();
     name = `報到紀錄_${stamp}.csv`;
     csv = toCsv(
-      ['姓名', '店名', '房號', '桌次', '備註', '報到時間', '報到方式', '住宿規範同意時間', '餐盒領取時間', '餐盒兌換方式'],
+      ['姓名', '店名', '房號', '桌次', '交通方式', 'Buffet資格', '備註', '報到時間', '報到方式', '住宿規範同意時間', 'Buffet兌換時間', 'Buffet兌換方式'],
       results.map((r) => [
         r.name,
         r.store,
         r.room,
         r.table_no,
+        r.transport,
+        r.buffet_eligible ? '有' : '無',
         r.note,
         r.checked_in_at,
         METHOD[r.checkin_method] || '',

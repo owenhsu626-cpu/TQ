@@ -50,15 +50,21 @@
         </section>
       </div>
 
+      <!-- 交通方式 -->
+      <section class="card transport">
+        <p class="big-label">交通方式</p>
+        <p class="transport-val" id="aTransport"></p>
+      </section>
+
       <!-- 注意事項 -->
       <section class="card">
         <h2 class="card-title">注意事項</h2>
         <div class="md" id="notice"></div>
       </section>
 
-      <!-- 餐盒兌換 -->
+      <!-- Buffet 兌換券 -->
       <section class="card" id="mealCard">
-        <h2 class="card-title">餐盒兌換</h2>
+        <h2 class="card-title">Buffet 兌換券</h2>
         <div id="mealBody"></div>
       </section>
 
@@ -90,34 +96,9 @@
   </main>
   <div class="footer-strip" aria-hidden="true"></div>
 
-  <!-- 調亮顯示：白底全螢幕 QR -->
-  <div class="bright" id="bright" hidden role="dialog" aria-modal="true" aria-label="QR Code 調亮顯示">
-    <p class="bright-title" id="brightTitle"></p>
-    <div class="bright-qr" id="brightQr"></div>
-    <p class="bright-sub" id="brightSub"></p>
-    <button class="btn ghost" type="button" id="brightClose">關閉</button>
-  </div>
-
-  <!-- 人工兌換 -->
-  <div class="modal" id="manual" hidden role="dialog" aria-modal="true" aria-labelledby="manualTitle">
-    <form class="card" id="manualForm" novalidate>
-      <h2 class="card-title" id="manualTitle">人工兌換</h2>
-      <p style="margin-top:0">請將手機交給<strong>工作人員</strong>輸入 4 位數兌換碼。</p>
-      <label class="field">
-        <span id="manualWhat"></span>
-        <input class="input code-input" id="manualCode" type="password" inputmode="numeric" pattern="[0-9]*"
-               maxlength="4" autocomplete="off" placeholder="••••">
-      </label>
-      <div class="alert error" id="manualErr" role="alert" hidden></div>
-      <div class="btn-row">
-        <button class="btn" type="submit" id="manualOk">確認兌換</button>
-        <button class="btn ghost" type="button" id="manualCancel">取消</button>
-      </div>
-    </form>
-  </div>
-
   <script src="/vendor/qrcode.js"></script>
   <script src="/js/common.js"></script>
+  <script src="/js/coupon.js"></script>
   <script src="/js/me.js"></script>
 </body>
 </html>

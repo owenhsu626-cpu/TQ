@@ -1,6 +1,7 @@
-// 報到完成頁：房號、桌次、注意事項、餐盒 QR、問卷、贈品 QR
+// 報到完成頁：房號、桌次、交通方式、注意事項、Buffet 兌換券、問卷、贈品 QR
 (function () {
-  const { api, esc, md, hm, mdhm, qrSvg, toast, tokenStore, CHECK_ICON } = window.BS;
+  const { api, esc, md, hm, mdhm, toast, tokenStore, CHECK_ICON } = window.BS;
+  const { qrBlock, redeemedBlock, noticeBlock } = window.BS.coupon;
   const $ = (id) => document.getElementById(id);
 
   // token：URL 優先，其次 localStorage
@@ -13,7 +14,6 @@
 
   let data = null;
   let pollTimer = null;
-  let manualKind = null;
   let lockUntil = null;
   let lockTimer = null;
 
@@ -22,21 +22,6 @@
       el.innerHTML = html;
       el.dataset.html = html;
     }
-  }
-
-  function redeemedBlock(title, at) {
-    return `<div class="redeemed"><div class="tick">${CHECK_ICON}</div><strong>${esc(title)}</strong>` +
-      `<span class="muted">${esc(mdhm(at))}</span></div>`;
-  }
-
-  function qrBlock(kind, code, caption) {
-    return `<div class="qr-box">
-      <div class="qr" role="img" aria-label="${kind === 'meal' ? '餐盒' : '贈品'}兌換 QR Code">${qrSvg(code)}</div>
-      <p class="qr-caption">${esc(caption)}</p>
-      <div class="qr-actions">
-        <button class="btn soft small" type="button" data-bright="${kind}">調亮顯示</button>
-        <button class="btn ghost small" type="button" data-manual="${kind}">人工兌換</button>
-      </div></div>`;
   }
 
   function surveyRange(s) {
@@ -50,18 +35,21 @@
     $('aName').textContent = d.attendee.name;
     $('aStore').textContent = d.attendee.store;
     $('aTime').textContent = mdhm(d.attendee.checked_in_at);
-    for (const [id, v] of [['aRoom', d.attendee.room], ['aTable', d.attendee.table_no]]) {
+    for (const [id, v] of [['aRoom', d.attendee.room], ['aTable', d.attendee.table_no], ['aTransport', d.attendee.transport]]) {
       $(id).textContent = v || '請洽櫃檯';
       $(id).classList.toggle('empty', !v);
     }
     setHtml($('notice'), md(d.notice));
 
-    // 餐盒
+    // Buffet 兌換券
+    const bf = d.buffet;
     setHtml(
       $('mealBody'),
-      d.meal.redeemed_at
-        ? redeemedBlock(`餐盒已領取 ${hm(d.meal.redeemed_at)}`, d.meal.redeemed_at)
-        : qrBlock('meal', d.meal.code, '領取餐盒時，請出示此 QR Code 給工作人員掃描（每人一份）')
+      !bf.eligible
+        ? noticeBlock('您沒有 Buffet 兌換券', '如有疑問請洽工作人員')
+        : bf.redeemed_at
+        ? redeemedBlock(`Buffet 已兌換 ${hm(bf.redeemed_at)}`, bf.redeemed_at)
+        : qrBlock('meal', bf.code, '用餐時請出示此 QR Code 給工作人員掃描（每人一份）')
     );
 
     // 問卷
@@ -93,7 +81,7 @@
         d.gift.redeemed_at
           ? redeemedBlock(`贈品已兌換 ${hm(d.gift.redeemed_at)}`, d.gift.redeemed_at)
           : d.gift.sold_out
-          ? `<div class="redeemed"><strong>贈品已兌換完畢</strong><span class="muted">感謝您填寫問卷</span></div>`
+          ? noticeBlock('贈品已兌換完畢', '感謝您填寫問卷')
           : qrBlock('gift', d.gift.code, '店家贈品：請出示此 QR Code 給工作人員掃描（每店一份）')
       );
     }
@@ -126,63 +114,21 @@
   function startPolling() {
     clearInterval(pollTimer);
     pollTimer = setInterval(() => {
-      if (document.visibilityState === 'visible' && $('surveyView').hidden && $('manual').hidden) load();
+      if (document.visibilityState === 'visible' && $('surveyView').hidden && !window.BS.coupon.isOpen()) load();
     }, 15000);
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && data && $('surveyView').hidden) load();
   });
 
-  // ---------- 調亮顯示 ----------
-  function openBright(kind) {
-    const code = kind === 'meal' ? data.meal.code : data.gift && data.gift.code;
-    if (!code) return;
-    $('brightTitle').textContent = kind === 'meal' ? '餐盒兌換' : '贈品兌換';
-    $('brightSub').textContent = `${data.attendee.name}｜${data.attendee.store}`;
-    $('brightQr').innerHTML = qrSvg(code);
-    $('bright').hidden = false;
-  }
-  $('brightClose').addEventListener('click', () => ($('bright').hidden = true));
-
-  // ---------- 人工兌換 ----------
-  function openManual(kind) {
-    manualKind = kind;
-    $('manualWhat').textContent = kind === 'meal' ? `兌換項目：餐盒（${data.attendee.name}）` : `兌換項目：店家贈品（${data.attendee.store}）`;
-    $('manualCode').value = '';
-    $('manualErr').hidden = true;
-    $('manual').hidden = false;
-    setTimeout(() => $('manualCode').focus(), 50);
-  }
-  $('manualCancel').addEventListener('click', () => ($('manual').hidden = true));
-  $('manualForm').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const code = $('manualCode').value.trim();
-    if (!/^\d{4}$/.test(code)) {
-      $('manualErr').textContent = '請輸入 4 位數兌換碼';
-      $('manualErr').hidden = false;
-      return;
-    }
-    $('manualOk').disabled = true;
-    try {
-      const r = await api('/api/redeem/manual', { body: { t: token, kind: manualKind, code } });
-      const msgs = {
-        redeemed: '兌換成功',
-        already: `已於 ${hm(r.at)} 兌換`,
-        not_checked_in: '尚未完成報到',
-        no_survey: '本店尚未填寫問卷',
-        sold_out: '贈品已兌換完畢',
-      };
-      $('manual').hidden = true;
-      toast(msgs[r.status] || '無法兌換', r.status !== 'redeemed');
-      load();
-    } catch (e) {
-      $('manualErr').textContent = e.message;
-      $('manualErr').hidden = false;
-      $('manualCode').value = '';
-      $('manualCode').focus();
-    } finally {
-      $('manualOk').disabled = false;
-    }
+  // ---------- 調亮顯示 / 人工兌換（共用元件） ----------
+  window.BS.coupon.bind($('page'), {
+    token: () => token,
+    info: (kind) =>
+      kind === 'meal'
+        ? { code: data.buffet.code, title: 'Buffet 兌換券', sub: `${data.attendee.name}｜${data.attendee.store}` }
+        : { code: data.gift && data.gift.code, title: '店家贈品', sub: data.attendee.store },
+    after: load,
   });
 
   // ---------- 問卷 ----------
@@ -310,9 +256,7 @@
   $('page').addEventListener('click', (ev) => {
     const t = ev.target.closest('button');
     if (!t) return;
-    if (t.dataset.bright) openBright(t.dataset.bright);
-    else if (t.dataset.manual) openManual(t.dataset.manual);
-    else if (t.dataset.refresh !== undefined) load();
+    if (t.dataset.refresh !== undefined) load();
     else if (t.id === 'surveyStart') startSurvey(t);
   });
 

@@ -43,6 +43,17 @@
 .redeemed .tick svg { width: 28px; height: 28px; }
 .redeemed strong { font-size: 20px; }
 
+/* 交通方式 */
+.card.transport { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 20px; }
+.transport-val { margin: 0; font-size: 22px; font-weight: 700; color: var(--red); text-align: right; }
+.transport-val.empty { font-size: 16px; color: var(--blue-gray); }
+
+.redeemed.none { background: #f0f3f5; }
+
+/* 人工兌換確認 */
+.confirm-q { margin: 0; font-size: 22px; font-weight: 700; }
+.confirm-staff { margin: 4px 0 10px; font-size: 18px; font-weight: 700; color: var(--red-dark); }
+
 /* 調亮顯示 */
 .bright {
   position: fixed; inset: 0; background: #fff; z-index: 60;
@@ -53,7 +64,6 @@
 .bright-qr { width: min(92vw, 70vh); aspect-ratio: 1; }
 .bright-qr svg { width: 100%; height: 100%; display: block; }
 
-.code-input { text-align: center; font-size: 32px; letter-spacing: 0.5em; font-variant-numeric: tabular-nums; }
 
 /* 問卷 */
 .q { padding: 16px 0; border-top: 1px solid var(--blue-light); }

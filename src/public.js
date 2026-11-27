@@ -7,14 +7,12 @@ import {
   readJson,
   getSettings,
   parseQuestions,
-  safeEqual,
   normName,
 } from './util.js';
 import { redeemMeal, redeemGift, giftRemaining } from './redeem.js';
 
 const LOCK_MINUTES = 10;
 const SURVEY_GRACE_MINUTES = 10; // 截止前已進入填寫者，截止後 10 分鐘內仍可送出
-const MANUAL_MAX_FAILS = 5;
 
 export async function handlePublic(request, env, path) {
   const db = env.DB;
@@ -159,10 +157,14 @@ async function me(db, token) {
       store: a.store,
       room: a.room,
       table_no: a.table_no,
+      transport: a.transport,
       checked_in_at: a.checked_in_at,
     },
     notice: s.notice_text,
-    meal: { code: 'M:' + a.token, redeemed_at: a.meal_redeemed_at },
+    // Buffet 兌換券：無資格時不提供 QR Code
+    buffet: a.buffet_eligible
+      ? { eligible: true, code: 'M:' + a.token, redeemed_at: a.meal_redeemed_at }
+      : { eligible: false },
     survey: {
       ...surveyWindow(s),
       done: done ? { by: done.by_name, at: done.submitted_at, mine: done.by_id === a.id } : null,
@@ -282,22 +284,15 @@ async function surveySubmit(db, body) {
   return json({ ok: true, status: 'submitted', at: now });
 }
 
-/** 參加者畫面上的「人工兌換」：工作人員輸入 4 位數兌換碼確認 */
+/**
+ * 參加者畫面上的「人工兌換」：跳出「是否確認兌換？請由工作人員操作」，
+ * 工作人員按下確認後送出（confirm: true）。kind = meal（Buffet）| gift
+ */
 async function manualRedeem(db, body) {
   const a = await attendeeByToken(db, body.t);
   const kind = body.kind;
   if (kind !== 'meal' && kind !== 'gift') throw new HttpError(400, '兌換項目錯誤');
-  if (a.manual_fail_count >= MANUAL_MAX_FAILS) {
-    throw new HttpError(429, '兌換碼錯誤次數過多，請工作人員改用後台兌換');
-  }
-  const s = await getSettings(db);
-  const code = String(body.code ?? '').trim();
-  if (!/^\d{4}$/.test(code) || !safeEqual(code, s.manual_code)) {
-    await db.prepare('UPDATE attendees SET manual_fail_count = manual_fail_count + 1 WHERE id = ?1').bind(a.id).run();
-    const left = MANUAL_MAX_FAILS - a.manual_fail_count - 1;
-    throw new HttpError(403, left > 0 ? `兌換碼錯誤（還可嘗試 ${left} 次）` : '兌換碼錯誤次數過多，請工作人員改用後台兌換');
-  }
-  if (a.manual_fail_count) await db.prepare('UPDATE attendees SET manual_fail_count = 0 WHERE id = ?1').bind(a.id).run();
+  if (body.confirm !== true) throw new HttpError(400, '請由工作人員確認兌換');
   const r = kind === 'meal' ? await redeemMeal(db, { id: a.id }, 'manual') : await redeemGift(db, { id: a.store_id }, 'manual');
   return json({ ok: r.status === 'redeemed', ...r });
 }

@@ -73,7 +73,6 @@ export const SETTING_KEYS = [
   'survey_open_at',
   'survey_close_at',
   'gift_stock',
-  'manual_code',
   'notice_text',
   'hotel_rules',
   'hotel_rules_agree',

@@ -2,7 +2,7 @@
 (function () {
   const { api, esc, hm, mdhm, toast } = window.BS;
   const $ = (id) => document.getElementById(id);
-  const METHOD = { self: '自助', staff: '櫃檯', scan: '掃碼', manual: '兌換碼' };
+  const METHOD = { self: '自助', staff: '櫃檯', scan: '掃碼', manual: '人工兌換' };
 
   let D = null; // dashboard 資料
   let lastRaw = '';
@@ -92,6 +92,7 @@
     $('envBadge').textContent = env === 'production' ? '正式站' : env === 'test' ? '測試站' : '本機';
     $('envBadge').className = 'env ' + env;
     $('resetCard').hidden = env === 'production';
+    initBuffetQr();
     document.title = $('envBadge').textContent + '｜報到後台';
     startPoll();
   }
@@ -129,9 +130,9 @@
       <div class="stat"><p class="stat-label">報到人數</p>
         <p class="stat-num">${t.checked_in}<small> / ${t.attendees}</small></p>
         <div class="bar"><i style="width:${r}%"></i></div><p class="stat-sub">報到率 ${r}%・未到 ${t.attendees - t.checked_in} 人</p></div>
-      <div class="stat"><p class="stat-label">餐盒</p>
-        <p class="stat-num">${t.meal}<small> / ${t.checked_in}</small></p>
-        <div class="bar"><i style="width:${pct(t.meal, t.checked_in)}%"></i></div><p class="stat-sub">已領 / 已報到（名單 ${t.attendees} 人）</p></div>
+      <div class="stat"><p class="stat-label">Buffet 兌換券</p>
+        <p class="stat-num">${t.meal}<small> / ${t.buffet_ready}</small></p>
+        <div class="bar"><i style="width:${pct(t.meal, t.buffet_ready)}%"></i></div><p class="stat-sub">已兌換 / 有資格且已報到（有資格共 ${t.buffet_eligible} 人）</p></div>
       <div class="stat"><p class="stat-label">問卷（店家）</p>
         <p class="stat-num">${t.surveys}<small> / ${t.stores}</small></p>
         <div class="bar"><i style="width:${pct(t.surveys, t.stores)}%"></i></div><p class="stat-sub">已填店家 / 總店家數</p></div>
@@ -145,12 +146,12 @@
     if (tab === 'overview') {
       const recent = D.attendees.filter((a) => a.checked_in_at).sort((a, b) => (a.checked_in_at < b.checked_in_at ? 1 : -1)).slice(0, 12);
       $('recent').innerHTML = recent.length
-        ? `<table class="tbl"><thead><tr><th>時間</th><th>姓名</th><th>店名</th><th>房號</th><th>桌次</th><th>方式</th></tr></thead><tbody>` +
+        ? `<table class="tbl"><thead><tr><th>時間</th><th>姓名</th><th>店名</th><th>房號</th><th>桌次</th><th>交通</th><th>方式</th></tr></thead><tbody>` +
           recent
             .map(
               (a) => `<tr><td class="c-status num">${esc(hm(a.checked_in_at))}</td><td class="c-name">${esc(a.name)}</td>
               <td class="c-wide">${esc(a.store)}</td><td data-l="房號">${esc(a.room)}</td><td data-l="桌次">${esc(a.table_no)}</td>
-              <td data-l="方式">${METHOD[a.checkin_method] || ''}</td></tr>`
+              <td data-l="交通">${esc(a.transport || '')}</td><td data-l="方式">${METHOD[a.checkin_method] || ''}</td></tr>`
             )
             .join('') +
           `</tbody></table>`
@@ -162,6 +163,11 @@
       [...new Set(D.attendees.map((a) => a.table_no).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-TW', { numeric: true })),
       '全部桌次',
       (v) => v + ' 桌'
+    );
+    fillSelect(
+      $('fTransport'),
+      [...new Set(D.attendees.map((a) => a.transport).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-TW', { numeric: true })),
+      '全部交通方式'
     );
   }
 
@@ -183,7 +189,7 @@
     limit = 200;
     renderPeople();
   });
-  ['q', 'fStore', 'fTable'].forEach((id) =>
+  ['q', 'fStore', 'fTable', 'fTransport'].forEach((id) =>
     $(id).addEventListener('input', () => {
       limit = 200;
       renderPeople();
@@ -195,23 +201,25 @@
     const q = $('q').value.trim().toLowerCase();
     const st = $('fStore').value;
     const tb = $('fTable').value;
+    const tr = $('fTransport').value;
     let list = D.attendees.filter((a) => {
       if (filter === 'absent' && a.checked_in_at) return false;
       if (filter === 'present' && !a.checked_in_at) return false;
       if (st && a.store !== st) return false;
       if (tb && String(a.table_no) !== tb) return false;
-      if (q && !`${a.name} ${a.store} ${a.room}`.toLowerCase().includes(q)) return false;
+      if (tr && a.transport !== tr) return false;
+      if (q && !`${a.name} ${a.store} ${a.room} ${a.transport || ''}`.toLowerCase().includes(q)) return false;
       return true;
     });
     if (filter === 'present') list.sort((a, b) => (a.checked_in_at < b.checked_in_at ? 1 : -1));
     const total = list.length;
     list = list.slice(0, limit);
     if (!total) {
-      $('peopleList').innerHTML = `<div class="empty">${filter === 'absent' && !q && !st && !tb ? '全部都已報到 🎉' : '沒有符合的資料'}</div>`;
+      $('peopleList').innerHTML = `<div class="empty">${filter === 'absent' && !q && !st && !tb && !tr ? '全部都已報到 🎉' : '沒有符合的資料'}</div>`;
       return;
     }
     $('peopleList').innerHTML =
-      `<table class="tbl"><thead><tr><th>姓名</th><th>狀態</th><th>店名</th><th>房號</th><th>桌次</th><th>餐盒</th><th>備註</th><th class="acts">操作</th></tr></thead><tbody>` +
+      `<table class="tbl"><thead><tr><th>姓名</th><th>狀態</th><th>店名</th><th>房號</th><th>桌次</th><th>交通</th><th>Buffet</th><th>備註</th><th class="acts">操作</th></tr></thead><tbody>` +
       list.map(personRow).join('') +
       `</tbody></table>` +
       (total > limit ? `<div class="more"><button class="btn ghost small" type="button" data-more>顯示更多（共 ${total} 筆）</button></div>` : '');
@@ -221,16 +229,18 @@
     const status = a.checked_in_at
       ? `<span class="pill done">已報到 ${esc(hm(a.checked_in_at))}</span>`
       : `<span class="pill no">未到</span>`;
-    const meal = a.meal_redeemed_at
-      ? `<span class="pill done">已領 ${esc(hm(a.meal_redeemed_at))}</span>`
+    const meal = !a.buffet_eligible
+      ? `<span class="pill no">無資格</span>`
+      : a.meal_redeemed_at
+      ? `<span class="pill done">已兌換 ${esc(hm(a.meal_redeemed_at))}</span>`
       : a.checked_in_at
-      ? `<span class="pill no">未領</span>`
-      : '—';
+      ? `<span class="pill warn">未兌換</span>`
+      : '<span class="muted small">有資格</span>';
     let acts = '';
     if (!a.checked_in_at) acts += `<button class="btn small" data-act="checkin" data-id="${a.id}">代報到</button>`;
     else {
-      if (!a.meal_redeemed_at) acts += `<button class="btn small" data-act="meal" data-id="${a.id}">兌換餐盒</button>`;
-      else acts += `<button class="btn ghost small" data-act="undo-meal" data-id="${a.id}">取消餐盒</button>`;
+      if (a.buffet_eligible && !a.meal_redeemed_at) acts += `<button class="btn small" data-act="meal" data-id="${a.id}">兌換 Buffet</button>`;
+      else if (a.meal_redeemed_at) acts += `<button class="btn ghost small" data-act="undo-meal" data-id="${a.id}">取消 Buffet</button>`;
       acts += `<button class="btn ghost small" data-act="undo-checkin" data-id="${a.id}">取消報到</button>`;
     }
     return `<tr>
@@ -239,7 +249,8 @@
       <td class="c-wide" data-l="店名">${esc(a.store)}</td>
       <td class="num" data-l="房號">${esc(a.room || '—')}</td>
       <td class="num" data-l="桌次">${esc(a.table_no || '—')}</td>
-      <td data-l="餐盒">${meal}</td>
+      <td data-l="交通">${esc(a.transport || '—')}</td>
+      <td data-l="Buffet">${meal}</td>
       <td class="c-wide" ${a.note ? 'data-l="備註"' : ''}>${esc(a.note || '')}</td>
       <td class="acts">${acts}</td></tr>`;
   }
@@ -283,7 +294,8 @@
   const REDEEM_MSG = {
     redeemed: '兌換成功',
     already: (r) => `已於 ${hm(r.at)} 兌換`,
-    not_checked_in: '尚未報到，不能領餐盒',
+    not_checked_in: '尚未報到，不能兌換 Buffet',
+    not_eligible: '沒有 Buffet 兌換券',
     no_survey: '本店尚未填寫問卷',
     sold_out: '贈品已兌換完畢',
     not_found: '查無資料',
@@ -307,7 +319,8 @@
     const confirms = {
       checkin: a && `確認幫「${a.name}（${a.store}）」代為報到？\n請先向本人說明酒店住宿規範。`,
       'undo-checkin': a && `取消「${a.name}」的報到紀錄？`,
-      'undo-meal': a && `取消「${a.name}」的餐盒兌換紀錄？`,
+      meal: a && `確認兌換「${a.name}（${a.store}）」的 Buffet 兌換券？`,
+      'undo-meal': a && `取消「${a.name}」的 Buffet 兌換紀錄？`,
       gift: s && `確認兌換「${s.name}」的店家贈品？`,
       'undo-gift': s && `取消「${s.name}」的贈品兌換紀錄？（庫存會加回 1）`,
       unlock: s && `解除「${s.name}」的問卷填寫鎖？（正在填寫的人送出時仍會成功）`,
@@ -390,11 +403,11 @@
     lastAt = now;
     try {
       const r = await guard(() => api('/api/admin/scan', { body: { code } }));
-      const kind = r.kind === 'meal' ? '餐盒' : r.kind === 'gift' ? '贈品' : '';
+      const kind = r.kind === 'meal' ? 'Buffet' : r.kind === 'gift' ? '贈品' : '';
       const who = r.kind === 'meal' ? `${r.name || ''}｜${r.store || ''}` : r.store || '';
-      if (r.status === 'invalid') showResult('bad', '無法辨識的 QR Code', '', '請確認是本活動的餐盒或贈品 QR Code');
+      if (r.status === 'invalid') showResult('bad', '無法辨識的 QR Code', '', '請確認是本活動的 Buffet 兌換券或贈品 QR Code');
       else if (r.status === 'redeemed')
-        showResult('ok', `${kind}兌換成功`, who, r.kind === 'gift' ? `剩餘贈品 ${r.remaining} 份` : `房號 ${r.room || '—'}・桌次 ${r.table_no || '—'}`);
+        showResult('ok', `${kind}兌換成功`, who, r.kind === 'gift' ? `剩餘贈品 ${r.remaining} 份` : `桌次 ${r.table_no || '—'}・房號 ${r.room || '—'}`);
       else if (r.status === 'already') showResult('warn', `${kind}已於 ${hm(r.at)} 兌換`, who, '請勿重複發放');
       else showResult('bad', redeemText(r), who, kind);
       log(`${new Date().toLocaleTimeString('zh-TW', { hour12: false })} ${kind} ${who} — ${r.status === 'redeemed' ? '成功' : redeemText(r)}`);
@@ -470,7 +483,7 @@
   });
 
   $('resetBtn').addEventListener('click', async () => {
-    const c = prompt('清空所有報到、問卷、餐盒與贈品兌換紀錄（保留名單）。\n請輸入「確認清空」繼續：');
+    const c = prompt('清空所有報到、問卷、Buffet 與贈品兌換紀錄（保留名單）。\n請輸入「確認清空」繼續：');
     if (c !== '確認清空') return;
     try {
       await guard(() => api('/api/admin/reset', { body: { confirm: c } }));
@@ -478,6 +491,94 @@
       lastRaw = '';
       refresh();
     } catch {}
+  });
+
+  // ---------- Buffet 統一入口 QR Code ----------
+  const BUFFET_URL = location.origin + '/buffet';
+  function qrMatrix(text) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr;
+  }
+  function drawQr(ctx, qr, x, y, size) {
+    const n = qr.getModuleCount();
+    const cell = size / n;
+    ctx.fillStyle = '#000';
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (qr.isDark(r, c)) ctx.fillRect(Math.floor(x + c * cell), Math.floor(y + r * cell), Math.ceil(cell), Math.ceil(cell));
+  }
+  function download(canvas, name) {
+    canvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => (URL.revokeObjectURL(a.href), a.remove()), 1000);
+    }, 'image/png');
+  }
+  function loadImg(src) {
+    return new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = src;
+    });
+  }
+  function initBuffetQr() {
+    $('bqUrl').textContent = BUFFET_URL;
+    $('bqUrl').href = BUFFET_URL;
+    $('bqPreview').innerHTML = BS.qrSvg(BUFFET_URL);
+  }
+  $('bqPng').addEventListener('click', () => {
+    const qr = qrMatrix(BUFFET_URL);
+    const size = 1200;
+    const margin = 120;
+    const c = document.createElement('canvas');
+    c.width = c.height = size + margin * 2;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    drawQr(ctx, qr, margin, margin, size);
+    download(c, 'buffet-entry-qrcode.png');
+  });
+  $('bqPoster').addEventListener('click', async () => {
+    const W = 2480, H = 3508; // A4 300dpi
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+    try {
+      const [strip, logo] = await Promise.all([loadImg('/assets/strip-top.jpg'), loadImg('/assets/logo.png')]);
+      const sh = 300;
+      for (let x = 0; x < W; x += (strip.width * sh) / strip.height) ctx.drawImage(strip, x, 0, (strip.width * sh) / strip.height, sh);
+      const bottom = await loadImg('/assets/strip-bottom.jpg');
+      const bh = 360;
+      for (let x = 0; x < W; x += (bottom.width * bh) / bottom.height) ctx.drawImage(bottom, x, H - bh, (bottom.width * bh) / bottom.height, bh);
+      const lw = 1100;
+      ctx.drawImage(logo, (W - lw) / 2, 470, lw, (logo.height * lw) / logo.width);
+    } catch {}
+    await document.fonts.ready.catch(() => {});
+    const font = (w, px) => `${w} ${px}px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e60013';
+    ctx.font = font(700, 230);
+    ctx.fillText('Buffet 兌換', W / 2, 920);
+    ctx.fillStyle = '#000';
+    ctx.font = font(400, 96);
+    ctx.fillText('請用手機相機掃描 QR Code', W / 2, 1100);
+    const qs = 1600;
+    drawQr(ctx, qrMatrix(BUFFET_URL), (W - qs) / 2, 1250, qs);
+    ctx.font = font(400, 80);
+    ctx.fillStyle = '#4a5963';
+    ctx.fillText('出示您的 Buffet 兌換券給工作人員', W / 2, 3000);
+    ctx.font = font(300, 52);
+    ctx.fillText(BUFFET_URL.replace(/^https?:\/\//, ''), W / 2, 3090);
+    download(c, 'buffet-poster-A4.png');
   });
 
   // ---------- 設定 ----------
@@ -497,7 +598,6 @@
       const v = settings[el.name] ?? '';
       el.value = el.type === 'datetime-local' ? toLocal(v) : v;
     }
-    $('codeWarn').textContent = settings.manual_code === '0000' ? '⚠ 兌換碼仍為預設 0000，上線前請務必修改。' : '';
     try {
       questions = JSON.parse(settings.survey_questions || '[]');
     } catch {

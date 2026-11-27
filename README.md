@@ -9,7 +9,8 @@ Cloudflare Workers + D1。一個 Worker 同時提供前端頁面（`public/`）�
 | 網址 | 用途 |
 | --- | --- |
 | `/` | 參加者報到（輸入姓名 → 選店 → 確認身分 → 住宿規範 → 完成） |
-| `/me?t=<token>` | 報到完成頁（房號、桌次、注意事項、餐盒 QR、問卷、贈品 QR） |
+| `/me?t=<token>` | 報到完成頁（房號、桌次、交通方式、注意事項、Buffet 兌換券、問卷、贈品 QR） |
+| `/buffet` | Buffet 統一入口（現場張貼的 QR Code；後台「匯入匯出」可下載 QR／A4 海報） |
 | `/admin/` | 工作人員後台（需密碼） |
 
 ## 本機開發
@@ -44,10 +45,10 @@ npm run db:migrate:prod
 
 ## 上線前檢查
 
-- [ ] 正式站後台 → 設定：**人工兌換碼改掉預設 0000**
 - [ ] 問卷開放時間、贈品數量、注意事項、問卷題目
-- [ ] 後台 → 匯入匯出：匯入正式名單 CSV（`姓名,店名,房號,桌次,備註`，UTF-8 或 Excel Big5 皆可）
-- [ ] 用手機實際掃一次餐盒與贈品 QR Code（後台掃碼需 HTTPS 才能開相機）
+- [ ] 後台 → 匯入匯出：匯入正式名單 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註`，UTF-8 或 Excel Big5 皆可）
+- [ ] 在**正式站**後台下載 Buffet 入口海報並列印（QR Code 指向下載時的站台）
+- [ ] 用手機實際掃一次 Buffet 與贈品 QR Code（後台掃碼需 HTTPS 才能開相機）
 
 ## 規則實作位置
 
@@ -56,7 +57,7 @@ npm run db:migrate:prod
 | 每店一份問卷 | `surveys.store_id UNIQUE`（`src/public.js` surveySubmit） |
 | 同店填寫鎖 10 分鐘 | `stores.survey_lock_by/until` 條件式 UPDATE（surveyStart） |
 | 每店一次贈品、限量 | 單一條件式 UPDATE：未兌換 + 已填問卷 + 已兌換數 < 總數（`src/redeem.js`） |
-| 每人一份餐盒、須已報到 | 條件式 UPDATE（`src/redeem.js`） |
+| 每人一份 Buffet、須有資格且已報到 | 條件式 UPDATE（`src/redeem.js`） |
 | 時間判斷 | 一律伺服器時間（台灣時間），`src/util.js` |
-| 人工兌換碼 | 伺服器比對，同一人錯 5 次鎖定，需改由後台兌換 |
+| 人工兌換 | 參加者畫面跳出確認視窗，由工作人員按「確認兌換」（伺服器要求 `confirm: true`） |
 | 後台登入 | `ADMIN_PASSWORD` secret + HMAC 簽章 cookie（16 小時），兩站各自獨立 |
