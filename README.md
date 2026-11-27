@@ -10,7 +10,7 @@ Cloudflare Workers + D1。一個 Worker 同時提供前端頁面（`public/`）�
 | --- | --- |
 | `/` | 參加者報到（輸入姓名 → 選店 → 確認身分 → 住宿規範 → 完成） |
 | `/me?t=<token>` | 報到完成頁（房號、桌次、交通方式、注意事項、Buffet 兌換券、問卷、贈品 QR） |
-| `/buffet` | Buffet 統一入口（現場張貼的 QR Code；後台「匯入匯出」可下載 QR／A4 海報） |
+| `/buffet` | Buffet 統一入口（現場張貼的 QR Code；後台「匯入匯出」可下載 QR Code） |
 | `/admin/` | 工作人員後台（需密碼） |
 
 ## 本機開發
@@ -48,7 +48,7 @@ npm run db:migrate:prod
 - [ ] 問卷開放時間、贈品數量、注意事項、問卷題目
 - [ ] 主辦方 Excel 名單轉檔：`python3 -I scripts/convert-bs-xlsx.py 名單.xlsx data/private/名單_匯入用.csv`（`data/private/` 不進 git）
 - [ ] 後台 → 匯入匯出：匯入正式名單 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註`，UTF-8 或 Excel Big5 皆可）
-- [ ] 在**正式站**後台下載 Buffet 入口海報並列印（QR Code 指向下載時的站台）
+- [ ] 在**正式站**後台下載 Buffet 入口 QR Code 並列印（QR Code 指向下載時的站台）
 - [ ] 用手機實際掃一次 Buffet 與贈品 QR Code（後台掃碼需 HTTPS 才能開相機）
 
 ## 規則實作位置

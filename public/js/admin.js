@@ -519,14 +519,6 @@
       setTimeout(() => (URL.revokeObjectURL(a.href), a.remove()), 1000);
     }, 'image/png');
   }
-  function loadImg(src) {
-    return new Promise((res, rej) => {
-      const i = new Image();
-      i.onload = () => res(i);
-      i.onerror = rej;
-      i.src = src;
-    });
-  }
   function initBuffetQr() {
     $('bqUrl').textContent = BUFFET_URL;
     $('bqUrl').href = BUFFET_URL;
@@ -543,42 +535,6 @@
     ctx.fillRect(0, 0, c.width, c.height);
     drawQr(ctx, qr, margin, margin, size);
     download(c, 'buffet-entry-qrcode.png');
-  });
-  $('bqPoster').addEventListener('click', async () => {
-    const W = 2480, H = 3508; // A4 300dpi
-    const c = document.createElement('canvas');
-    c.width = W;
-    c.height = H;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, W, H);
-    try {
-      const [strip, logo] = await Promise.all([loadImg('/assets/strip-top.jpg'), loadImg('/assets/logo.png')]);
-      const sh = 300;
-      for (let x = 0; x < W; x += (strip.width * sh) / strip.height) ctx.drawImage(strip, x, 0, (strip.width * sh) / strip.height, sh);
-      const bottom = await loadImg('/assets/strip-bottom.jpg');
-      const bh = 360;
-      for (let x = 0; x < W; x += (bottom.width * bh) / bottom.height) ctx.drawImage(bottom, x, H - bh, (bottom.width * bh) / bottom.height, bh);
-      const lw = 1100;
-      ctx.drawImage(logo, (W - lw) / 2, 470, lw, (logo.height * lw) / logo.width);
-    } catch {}
-    await document.fonts.ready.catch(() => {});
-    const font = (w, px) => `${w} ${px}px 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#e60013';
-    ctx.font = font(700, 230);
-    ctx.fillText('Buffet 兌換', W / 2, 920);
-    ctx.fillStyle = '#000';
-    ctx.font = font(400, 96);
-    ctx.fillText('請用手機相機掃描 QR Code', W / 2, 1100);
-    const qs = 1600;
-    drawQr(ctx, qrMatrix(BUFFET_URL), (W - qs) / 2, 1250, qs);
-    ctx.font = font(400, 80);
-    ctx.fillStyle = '#4a5963';
-    ctx.fillText('出示您的 Buffet 兌換券給工作人員', W / 2, 3000);
-    ctx.font = font(300, 52);
-    ctx.fillText(BUFFET_URL.replace(/^https?:\/\//, ''), W / 2, 3090);
-    download(c, 'buffet-poster-A4.png');
   });
 
   // ---------- 設定 ----------
