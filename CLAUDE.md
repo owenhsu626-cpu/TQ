@@ -60,5 +60,6 @@
 
 - 滿意度問卷題目：先放 3 題示範題（後台可編輯題目）
 - 「簡單注意事項」文字：先放示範文字（後台可編輯，所有人相同）
-- 正式名單：先用 `data/sample-attendees.csv`，之後由主辦方匯入 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註`；Buffet資格「有／無」，空白視為「有」）
+- 正式名單：先用 `data/sample-attendees.csv`，之後由主辦方匯入 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註[,身分]`；Buffet資格「有／無」，空白視為「有」；身分填「公司人員」= 以部門為店名、不填問卷、不領贈品，`stores.is_staff`）
+- 主辦方 Excel（「店家名單」「BS公司人員」兩分頁）用 `scripts/convert-bs-xlsx.py` 轉成匯入 CSV；含真實姓名的檔案放 `data/private/`（不進 git）
 - HONOR Sans TC 是否有網頁授權未確認 → 先用 Noto Sans TC

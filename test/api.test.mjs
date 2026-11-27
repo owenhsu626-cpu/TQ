@@ -179,6 +179,22 @@ test('Buffet 資格：無資格者看不到兌換券、掃碼與人工兌換都�
   assert.equal(me2.attendee.transport, yes.transport);
 });
 
+test('公司人員：照常報到與 Buffet，但沒有問卷與贈品，也不計入店家統計', async () => {
+  const t = await checkinByName('張志明');
+  const me = await call('/api/me?t=' + encodeURIComponent(t));
+  assert.equal(me.staff, true);
+  assert.equal(me.survey, null);
+  assert.equal(me.gift, null);
+  assert.equal(me.attendee.store, '行銷部');
+  assert.equal(me.buffet.eligible, true);
+  assert.equal((await call('/api/survey/start', { t })).status, 'staff');
+  assert.equal((await call('/api/survey/submit', { t, answers: { q1: 5, q2: '晚宴' } })).status, 'staff');
+  const d = await admin('dashboard');
+  assert.ok(!d.stores.some((s) => s.name === '行銷部' || s.name === '北區'));
+  const p = d.attendees.find((a) => a.name === '張志明');
+  assert.equal(p.is_staff, 1);
+});
+
 test('無效 QR、無效 token、未登入', async () => {
   assert.equal((await admin('scan', { code: 'hello' })).status, 'invalid');
   assert.equal((await admin('scan', { code: 'M:xxxxxxxxxxxxxxxxxxxx' })).status, 'not_found');
@@ -201,5 +217,9 @@ test('CSV 匯入檢查（交通方式、Buffet資格）', async () => {
   });
   assert.equal(ok.count, 3);
   const noHeader = await admin('import', { csv: '王四,新店,104,9,3 號車,無,\n', dryRun: true });
+  const badRole = await admin('import', { csv: '姓名,店名,身分\n王五,新店,老闆\n', dryRun: true });
+  assert.equal(badRole.status, 400);
+  const mixed = await admin('import', { csv: '姓名,店名,身分\n王五,新店,公司人員\n王六,新店,\n', dryRun: true });
+  assert.equal(mixed.status, 400);
   assert.equal(noHeader.count, 1);
 });

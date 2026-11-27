@@ -19,7 +19,8 @@ const q = (v) => "'" + String(v ?? '').replace(/'/g, "''") + "'";
 
 const lines = ['DELETE FROM surveys;', 'DELETE FROM attendees;', 'DELETE FROM stores;'];
 for (const s of [...new Set(rows.map((r) => r.store))]) {
-  lines.push(`INSERT INTO stores (name, gift_token) VALUES (${q(s)}, ${q(tok())});`);
+  const staff = rows.find((r) => r.store === s).staff;
+  lines.push(`INSERT INTO stores (name, gift_token, is_staff) VALUES (${q(s)}, ${q(tok())}, ${staff});`);
 }
 for (const r of rows) {
   lines.push(

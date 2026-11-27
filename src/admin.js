@@ -94,14 +94,14 @@ async function dashboard(db, env) {
   const [att, stores, gift] = await Promise.all([
     db
       .prepare(
-        `SELECT a.id, a.name, a.store_id, s.name AS store, a.room, a.table_no, a.transport, a.buffet_eligible, a.note,
+        `SELECT a.id, a.name, a.store_id, s.name AS store, s.is_staff, a.room, a.table_no, a.transport, a.buffet_eligible, a.note,
                 a.checked_in_at, a.checkin_method, a.meal_redeemed_at, a.meal_redeemed_by
          FROM attendees a JOIN stores s ON s.id = a.store_id ORDER BY s.name, a.name`
       )
       .all(),
     db
       .prepare(
-        `SELECT s.id, s.name, s.gift_redeemed_at, s.gift_redeemed_by, s.survey_lock_by, s.survey_lock_until,
+        `SELECT s.id, s.name, s.is_staff, s.gift_redeemed_at, s.gift_redeemed_by, s.survey_lock_by, s.survey_lock_until,
                 (SELECT COUNT(*) FROM attendees a WHERE a.store_id = s.id) AS members,
                 (SELECT COUNT(*) FROM attendees a WHERE a.store_id = s.id AND a.checked_in_at IS NOT NULL) AS checked,
                 v.submitted_at AS survey_at, va.name AS survey_by,
@@ -117,7 +117,8 @@ async function dashboard(db, env) {
   ]);
   const now = nowTw();
   const a = att.results;
-  const st = stores.results.map((s) => ({
+  // 問卷／贈品只計一般店家（公司人員不填問卷、不領贈品）
+  const st = stores.results.filter((s) => !s.is_staff).map((s) => ({
     ...s,
     lock_name: s.survey_lock_until && s.survey_lock_until > now && !s.survey_at ? s.lock_name : null,
   }));
@@ -301,7 +302,9 @@ async function importCsv(db, env, body) {
   const storeNames = [...new Set(rows.map((r) => r.store))];
   const stmts = [];
   for (const name of storeNames) {
+    const staff = rows.find((r) => r.store === name).staff;
     stmts.push(db.prepare('INSERT OR IGNORE INTO stores (name, gift_token) VALUES (?1, ?2)').bind(name, randomToken()));
+    stmts.push(db.prepare('UPDATE stores SET is_staff = ?1 WHERE name = ?2').bind(staff, name));
   }
   for (const r of rows) {
     stmts.push(
@@ -329,12 +332,12 @@ async function exportCsv(db, type) {
   if (type === 'attendees') {
     const { results } = await db
       .prepare(
-        `SELECT a.*, s.name AS store FROM attendees a JOIN stores s ON s.id = a.store_id ORDER BY s.name, a.name`
+        `SELECT a.*, s.name AS store, s.is_staff FROM attendees a JOIN stores s ON s.id = a.store_id ORDER BY s.is_staff, s.name, a.name`
       )
       .all();
     name = `報到紀錄_${stamp}.csv`;
     csv = toCsv(
-      ['姓名', '店名', '房號', '桌次', '交通方式', 'Buffet資格', '備註', '報到時間', '報到方式', '住宿規範同意時間', 'Buffet兌換時間', 'Buffet兌換方式'],
+      ['姓名', '店名', '房號', '桌次', '交通方式', 'Buffet資格', '備註', '身分', '報到時間', '報到方式', '住宿規範同意時間', 'Buffet兌換時間', 'Buffet兌換方式'],
       results.map((r) => [
         r.name,
         r.store,
@@ -343,6 +346,7 @@ async function exportCsv(db, type) {
         r.transport,
         r.buffet_eligible ? '有' : '無',
         r.note,
+        r.is_staff ? '公司人員' : '',
         r.checked_in_at,
         METHOD[r.checkin_method] || '',
         r.rules_agreed_at,
@@ -383,7 +387,7 @@ async function exportCsv(db, type) {
                 (SELECT COUNT(*) FROM attendees a WHERE a.store_id = s.id AND a.checked_in_at IS NOT NULL) AS checked,
                 v.submitted_at, va.name AS survey_by
          FROM stores s LEFT JOIN surveys v ON v.store_id = s.id LEFT JOIN attendees va ON va.id = v.attendee_id
-         ORDER BY s.name`
+         WHERE s.is_staff = 0 ORDER BY s.name`
       )
       .all();
     name = `店家兌換紀錄_${stamp}.csv`;

@@ -8,6 +8,7 @@
   let savedName = '';
   let savedToken = '';
   let lastStatus = null;
+  let savedIsStaff = false; // 本機已報到者為公司人員：不顯示問卷入口
 
   function show(step) {
     steps.forEach((s) => ($(s).hidden = s !== step));
@@ -18,8 +19,8 @@
     $('innerTop').hidden = home;
     if (!home) window.scrollTo(0, 0);
     // 問卷開放時，問卷卡片已含「我的頁面」入口，不再重複顯示已報到提示
-    $('surveyBox').hidden = !(home && surveyOpen);
-    $('savedBox').hidden = !(home && savedName && !surveyOpen);
+    $('surveyBox').hidden = !(home && surveyOpen && !savedIsStaff);
+    $('savedBox').hidden = !(home && savedName && (!surveyOpen || savedIsStaff));
   }
 
   function goMe(token) {
@@ -148,6 +149,7 @@
     tokenStore.clear();
     savedName = '';
     savedToken = '';
+    savedIsStaff = false;
     $('savedBox').hidden = true;
     renderSurveyBox(lastStatus, null);
     show('stepSearch');
@@ -199,6 +201,7 @@
   Promise.all([api('/api/status').catch(() => null), meReq]).then(([status, me]) => {
     lastStatus = status;
     if (me) {
+      savedIsStaff = !me.survey;
       savedName = me.attendee.name;
       savedToken = saved;
       $('savedBox').querySelector('strong').textContent = `${me.attendee.name}（${me.attendee.store}）您已完成報到`;

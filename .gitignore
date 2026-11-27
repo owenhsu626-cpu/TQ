@@ -4,3 +4,4 @@ node_modules/
 .dev.vars.*
 *.log
 src/static-assets.gen.js
+data/private/

@@ -52,10 +52,13 @@
         : qrBlock('meal', bf.code, '用餐時請出示此 QR Code 給工作人員掃描（每人一份）')
     );
 
-    // 問卷
+    // 問卷（公司人員不顯示問卷與贈品）
     const s = d.survey;
-    let sh;
-    if (s.done) {
+    $('surveyCard').hidden = !s;
+    let sh = '';
+    if (!s) {
+      // 公司人員
+    } else if (s.done) {
       sh = s.done.mine
         ? `<div class="redeemed"><div class="tick">${CHECK_ICON}</div><strong>您已完成填寫，感謝！</strong><span class="muted">${esc(mdhm(s.done.at))}</span></div>`
         : `<div class="redeemed"><div class="tick">${CHECK_ICON}</div><strong>本店已由 ${esc(s.done.by)} 於 ${esc(hm(s.done.at))} 填寫完成</strong><span class="muted">感謝您的配合</span></div>`;
@@ -264,7 +267,7 @@
   async function autoSurvey() {
     if (params.get('survey') !== '1') return;
     history.replaceState(null, '', '/me?t=' + encodeURIComponent(token));
-    if (!data) return;
+    if (!data || !data.survey) return;
     const s = data.survey;
     const btn = $('surveyStart');
     if (s.state === 'open' && !s.done && !(s.lock && !s.lock.mine) && btn) return startSurvey(btn);

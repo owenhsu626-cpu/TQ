@@ -46,7 +46,7 @@ async function attendeeByToken(db, token) {
   if (!token || typeof token !== 'string' || token.length > 64) throw new HttpError(404, '連結無效，請重新掃碼查詢');
   const a = await db
     .prepare(
-      `SELECT a.*, s.name AS store, s.gift_token, s.gift_redeemed_at, s.survey_lock_by, s.survey_lock_until
+      `SELECT a.*, s.name AS store, s.is_staff, s.gift_token, s.gift_redeemed_at, s.survey_lock_by, s.survey_lock_until
        FROM attendees a JOIN stores s ON s.id = a.store_id WHERE a.token = ?1`
     )
     .bind(token)
@@ -146,8 +146,9 @@ async function me(db, token) {
   const a = await attendeeByToken(db, token);
   const s = await getSettings(db);
   const now = nowTw();
-  const done = await storeSurvey(db, a.store_id);
-  const lock = done ? null : await lockHolder(db, a, now);
+  const staff = !!a.is_staff;
+  const done = staff ? null : await storeSurvey(db, a.store_id);
+  const lock = staff || done ? null : await lockHolder(db, a, now);
   const gift = await giftRemaining(db);
   return json({
     ok: true,
@@ -165,7 +166,11 @@ async function me(db, token) {
     buffet: a.buffet_eligible
       ? { eligible: true, code: 'M:' + a.token, redeemed_at: a.meal_redeemed_at }
       : { eligible: false },
-    survey: {
+    staff,
+    // 公司人員不填問卷、不領贈品
+    survey: staff
+      ? null
+      : {
       ...surveyWindow(s),
       done: done ? { by: done.by_name, at: done.submitted_at, mine: done.by_id === a.id } : null,
       lock: lock ? { mine: lock.mine, by: lock.name } : null,
@@ -187,6 +192,7 @@ function addMinutes(iso, min) {
 /** 進入問卷：取得店家填寫鎖（10 分鐘） */
 async function surveyStart(db, body) {
   const a = await attendeeByToken(db, body.t);
+  if (a.is_staff) return json({ ok: false, status: 'staff' });
   const s = await getSettings(db);
   const w = surveyWindow(s);
   if (w.state !== 'open') {
@@ -254,6 +260,7 @@ function validateAnswers(questions, answers) {
 /** 送出問卷：UNIQUE(store_id) 兜底，後送出者被資料庫拒絕 */
 async function surveySubmit(db, body) {
   const a = await attendeeByToken(db, body.t);
+  if (a.is_staff) return json({ ok: false, status: 'staff' });
   const s = await getSettings(db);
   const now = nowTw();
   const holdsLock = a.survey_lock_by === a.id && a.survey_lock_until && a.survey_lock_until > now;

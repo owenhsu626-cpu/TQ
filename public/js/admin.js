@@ -246,7 +246,7 @@
     return `<tr>
       <td class="c-name">${esc(a.name)}</td>
       <td class="c-status">${status}</td>
-      <td class="c-wide" data-l="店名">${esc(a.store)}</td>
+      <td class="c-wide" data-l="店名">${esc(a.store)}${a.is_staff ? ' <span class="pill no">公司人員</span>' : ''}</td>
       <td class="num" data-l="房號">${esc(a.room || '—')}</td>
       <td class="num" data-l="桌次">${esc(a.table_no || '—')}</td>
       <td data-l="交通">${esc(a.transport || '—')}</td>

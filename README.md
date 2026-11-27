@@ -46,6 +46,7 @@ npm run db:migrate:prod
 ## 上線前檢查
 
 - [ ] 問卷開放時間、贈品數量、注意事項、問卷題目
+- [ ] 主辦方 Excel 名單轉檔：`python3 -I scripts/convert-bs-xlsx.py 名單.xlsx data/private/名單_匯入用.csv`（`data/private/` 不進 git）
 - [ ] 後台 → 匯入匯出：匯入正式名單 CSV（`姓名,店名,房號,桌次,交通方式,Buffet資格,備註`，UTF-8 或 Excel Big5 皆可）
 - [ ] 在**正式站**後台下載 Buffet 入口海報並列印（QR Code 指向下載時的站台）
 - [ ] 用手機實際掃一次 Buffet 與贈品 QR Code（後台掃碼需 HTTPS 才能開相機）

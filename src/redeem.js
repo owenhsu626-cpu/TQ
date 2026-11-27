@@ -43,6 +43,7 @@ export async function redeemGift(db, where, by) {
     .prepare(
       `UPDATE stores SET gift_redeemed_at = ?1, gift_redeemed_by = ?2
        WHERE ${col} = ?3 AND gift_redeemed_at IS NULL
+         AND is_staff = 0
          AND EXISTS (SELECT 1 FROM surveys WHERE surveys.store_id = stores.id)
          AND (SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'gift_stock')
              > (SELECT COUNT(*) FROM stores WHERE gift_redeemed_at IS NOT NULL)`
